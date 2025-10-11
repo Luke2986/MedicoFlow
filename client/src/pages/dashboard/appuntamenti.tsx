@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus, Clock, User, Pencil, Trash2 } from "lucide-react";
+import { Calendar, Plus, Clock, User, Pencil, Trash2, List } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { CalendarView } from "@/components/calendar-view";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,8 @@ export default function Appuntamenti() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedAppuntamento, setSelectedAppuntamento] = useState<Appuntamento | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [preselectedDate, setPreselectedDate] = useState<Date | null>(null);
   const { toast } = useToast();
 
   const { data: appuntamenti = [], isLoading } = useQuery<Appuntamento[]>({
@@ -122,6 +125,22 @@ export default function Appuntamenti() {
     createMutation.mutate(data);
   };
 
+  const handleCreateFromCalendar = (date: Date) => {
+    setPreselectedDate(date);
+    setDialogOpen(true);
+  };
+
+  const handleEditFromCalendar = (app: Appuntamento) => {
+    setSelectedAppuntamento(app);
+    setEditDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (!dialogOpen) {
+      setPreselectedDate(null);
+    }
+  }, [dialogOpen]);
+
   const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedAppuntamento) return;
@@ -165,13 +184,36 @@ export default function Appuntamenti() {
             Gestisci il calendario degli appuntamenti
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" disabled={pazienti.length === 0} data-testid="button-add-appointment">
-              <Plus className="w-4 h-4" />
-              Nuovo Appuntamento
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="rounded-r-none"
+              data-testid="button-view-list"
+            >
+              <List className="w-4 h-4 mr-2" />
+              Lista
             </Button>
-          </DialogTrigger>
+            <Button
+              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className="rounded-l-none"
+              data-testid="button-view-calendar"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Calendario
+            </Button>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2" disabled={pazienti.length === 0} data-testid="button-add-appointment">
+                <Plus className="w-4 h-4" />
+                Nuovo Appuntamento
+              </Button>
+            </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Crea Nuovo Appuntamento</DialogTitle>
@@ -199,7 +241,14 @@ export default function Appuntamenti() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="data">Data *</Label>
-                    <Input id="data" name="data" type="date" required data-testid="input-date" />
+                    <Input 
+                      id="data" 
+                      name="data" 
+                      type="date" 
+                      required 
+                      defaultValue={preselectedDate ? preselectedDate.toISOString().split('T')[0] : undefined}
+                      data-testid="input-date" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="ora">Ora *</Label>
@@ -259,6 +308,7 @@ export default function Appuntamenti() {
               </form>
             </DialogContent>
           </Dialog>
+        </div>
       </div>
 
       {/* Edit Dialog */}
@@ -381,102 +431,125 @@ export default function Appuntamenti() {
         </DialogContent>
       </Dialog>
 
-      <Card className="p-6">
-        {pazienti.length === 0 ? (
-          <div className="text-center py-16">
-            <User className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              Nessun paziente disponibile
-            </h3>
-            <p className="text-muted-foreground">
-              Prima di creare appuntamenti, aggiungi almeno un paziente
-            </p>
-          </div>
-        ) : isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Caricamento...</p>
-          </div>
-        ) : appuntamenti.length === 0 ? (
-          <div className="text-center py-16">
-            <Calendar className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              Nessun appuntamento programmato
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              Il calendario è vuoto. Inizia aggiungendo il primo appuntamento
-            </p>
-            <Button onClick={() => setDialogOpen(true)} className="gap-2" data-testid="button-add-first-appointment">
-              <Plus className="w-4 h-4" />
-              Crea Appuntamento
-            </Button>
-          </div>
+      {viewMode === 'calendar' ? (
+        pazienti.length === 0 ? (
+          <Card className="p-6">
+            <div className="text-center py-16">
+              <User className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Nessun paziente disponibile
+              </h3>
+              <p className="text-muted-foreground">
+                Prima di creare appuntamenti, aggiungi almeno un paziente
+              </p>
+            </div>
+          </Card>
         ) : (
-          <div className="space-y-3">
-            {appuntamenti.map((app) => {
-              const paziente = pazienti.find(p => p.id === app.pazienteId);
-              return (
-                <div 
-                  key={app.id} 
-                  className="flex items-center justify-between p-4 rounded-md border border-border hover-elevate active-elevate-2"
-                  data-testid={`card-appointment-${app.id}`}
-                >
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-card-foreground">
-                        {paziente ? `${paziente.cognome} ${paziente.nome}` : "Paziente sconosciuto"}
-                      </p>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(app.dataOra).toLocaleString('it-IT', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </span>
-                        <span>•</span>
-                        <span>{app.tipo}</span>
-                        <span>•</span>
-                        <span>{app.durata} min</span>
+          <CalendarView
+            appuntamenti={appuntamenti}
+            pazienti={pazienti}
+            onEditAppointment={handleEditFromCalendar}
+            onCreateAppointment={handleCreateFromCalendar}
+          />
+        )
+      ) : (
+        <Card className="p-6">
+          {pazienti.length === 0 ? (
+            <div className="text-center py-16">
+              <User className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Nessun paziente disponibile
+              </h3>
+              <p className="text-muted-foreground">
+                Prima di creare appuntamenti, aggiungi almeno un paziente
+              </p>
+            </div>
+          ) : isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Caricamento...</p>
+            </div>
+          ) : appuntamenti.length === 0 ? (
+            <div className="text-center py-16">
+              <Calendar className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Nessun appuntamento programmato
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                Il calendario è vuoto. Inizia aggiungendo il primo appuntamento
+              </p>
+              <Button onClick={() => setDialogOpen(true)} className="gap-2" data-testid="button-add-first-appointment">
+                <Plus className="w-4 h-4" />
+                Crea Appuntamento
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {appuntamenti.map((app) => {
+                const paziente = pazienti.find(p => p.id === app.pazienteId);
+                return (
+                  <div 
+                    key={app.id} 
+                    className="flex items-center justify-between p-4 rounded-md border border-border hover-elevate active-elevate-2"
+                    data-testid={`card-appointment-${app.id}`}
+                  >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-card-foreground">
+                          {paziente ? `${paziente.cognome} ${paziente.nome}` : "Paziente sconosciuto"}
+                        </p>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(app.dataOra).toLocaleString('it-IT', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}
+                          </span>
+                          <span>•</span>
+                          <span>{app.tipo}</span>
+                          <span>•</span>
+                          <span>{app.durata} min</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-md ${getStatusColor(app.stato)}`}>
+                        {app.stato}
+                      </span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          setSelectedAppuntamento(app);
+                          setEditDialogOpen(true);
+                        }}
+                        data-testid={`button-edit-${app.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          if (confirm(`Eliminare questo appuntamento?`)) {
+                            deleteMutation.mutate(app.id);
+                          }
+                        }}
+                        data-testid={`button-delete-${app.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-md ${getStatusColor(app.stato)}`}>
-                      {app.stato}
-                    </span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        setSelectedAppuntamento(app);
-                        setEditDialogOpen(true);
-                      }}
-                      data-testid={`button-edit-${app.id}`}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => {
-                        if (confirm(`Eliminare questo appuntamento?`)) {
-                          deleteMutation.mutate(app.id);
-                        }
-                      }}
-                      data-testid={`button-delete-${app.id}`}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

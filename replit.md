@@ -69,7 +69,14 @@ Modelli principali:
 - Homepage con hero section professionale
 - Dashboard layout con sidebar navigazione
 - Dashboard con statistiche reali (pazienti, appuntamenti oggi/settimana, tasso attività)
-- Gestione pazienti: CRUD completo (Create, Read, Update, Delete) con ricerca fulltext
+- Gestione pazienti: CRUD completo (Create, Read, Update, Delete)
+- **Search Intelligente Pazienti** (gennaio 2025):
+  - Custom hook useDebounce (500ms) per performance
+  - Filtri avanzati: età (min/max), sesso, città, provincia
+  - Ricerca fulltext su nome, cognome, codice fiscale
+  - Validazione backend robusta (NaN guards, range 0-150 anni)
+  - SQL date arithmetic timezone-safe per filtro età
+  - UI collapsible con clear dinamico
 - Gestione appuntamenti: CRUD completo (Create, Read, Update, Delete)
 - Backend API completo con validazione Zod (POST, GET, PATCH, DELETE)
 - Update schemas con .partial() per aggiornamenti parziali
