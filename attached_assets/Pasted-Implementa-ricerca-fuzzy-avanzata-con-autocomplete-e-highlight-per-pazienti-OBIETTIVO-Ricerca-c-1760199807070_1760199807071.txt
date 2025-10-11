@@ -1,0 +1,483 @@
+Implementa ricerca fuzzy avanzata con autocomplete e highlight per pazienti.
+
+OBIETTIVO:
+- Ricerca con tolleranza typo ("Maro" trova "Mario")
+- Autocomplete dropdown real-time
+- Highlight match nei risultati
+- Ricerca su: nome, cognome, CF, telefono, città
+- Keyboard navigation (arrow keys, enter)
+
+1. Installa Fuse.js:
+npm install fuse.js
+npm install -D @types/fuse.js
+
+2. Crea hook custom per fuzzy search - lib/hooks/useFuzzySearch.ts:
+
+import { useMemo, useState, useEffect } from 'react'
+import Fuse from 'fuse.js'
+
+interface UseFuzzySearchOptions<T> {
+  data: T[]
+  keys: string[]
+  threshold?: number
+  limit?: number
+}
+
+export function useFuzzySearch<T>({
+  data,
+  keys,
+  threshold = 0.3,
+  limit = 10
+}: UseFuzzySearchOptions<T>) {
+  const [query, setQuery] = useState('')
+  
+  const fuse = useMemo(() => {
+    return new Fuse(data, {
+      keys,
+      threshold,
+      includeScore: true,
+      includeMatches: true,
+      minMatchCharLength: 2,
+      distance: 100
+    })
+  }, [data, keys, threshold])
+
+  const results = useMemo(() => {
+    if (!query.trim()) return []
+    
+    const fuseResults = fuse.search(query, { limit })
+    
+    return fuseResults.map(result => ({
+      item: result.item,
+      score: result.score,
+      matches: result.matches
+    }))
+  }, [query, fuse, limit])
+
+  return {
+    query,
+    setQuery,
+    results,
+    hasResults: results.length > 0
+  }
+}
+
+3. Crea utility per highlight - lib/highlightMatch.ts:
+
+export function highlightMatch(text: string, indices: readonly [number, number][]): React.ReactNode {
+  if (!indices || indices.length === 0) {
+    return text
+  }
+
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+
+  // Ordina gli indici
+  const sortedIndices = [...indices].sort((a, b) => a[0] - b[0])
+
+  sortedIndices.forEach(([start, end], idx) => {
+    // Aggiungi testo normale prima del match
+    if (start > lastIndex) {
+      parts.push(
+        <span key={`normal-${idx}`}>{text.slice(lastIndex, start)}</span>
+      )
+    }
+
+    // Aggiungi testo highlighted
+    parts.push(
+      <span key={`highlight-${idx}`} className="bg-yellow-200 font-semibold">
+        {text.slice(start, end + 1)}
+      </span>
+    )
+
+    lastIndex = end + 1
+  })
+
+  // Aggiungi testo rimanente
+  if (lastIndex < text.length) {
+    parts.push(
+      <span key="normal-end">{text.slice(lastIndex)}</span>
+    )
+  }
+
+  return <>{parts}</>
+}
+
+4. Crea componente AutocompleteSearch - components/pazienti/AutocompleteSearch.tsx:
+
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Search, User, X } from 'lucide-react'
+import { useFuzzySearch } from '@/lib/hooks/useFuzzySearch'
+import { highlightMatch } from '@/lib/highlightMatch'
+
+interface Paziente {
+  id: string
+  nome: string
+  cognome: string
+  codiceFiscale: string
+  telefono: string
+  email?: string | null
+  citta: string
+}
+
+export default function AutocompleteSearch({ 
+  pazienti 
+}: { 
+  pazienti: Paziente[] 
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  const { query, setQuery, results, hasResults } = useFuzzySearch({
+    data: pazienti,
+    keys: ['nome', 'cognome', 'codiceFiscale', 'telefono', 'email', 'citta'],
+    threshold: 0.3,
+    limit: 8
+  })
+
+  // Apri dropdown quando ci sono risultati
+  useEffect(() => {
+    setIsOpen(query.length >= 2 && hasResults)
+    setSelectedIndex(0)
+  }, [query, hasResults])
+
+  // Click outside per chiudere
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        !inputRef.current?.contains(e.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedIndex(prev => 
+          prev < results.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : prev)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (results[selectedIndex]) {
+          handleSelect(results[selectedIndex].item)
+        }
+        break
+      case 'Escape':
+        setIsOpen(false)
+        inputRef.current?.blur()
+        break
+    }
+  }
+
+  const handleSelect = (paziente: Paziente) => {
+    router.push(`/dashboard/pazienti/${paziente.id}`)
+    setQuery('')
+    setIsOpen(false)
+    inputRef.current?.blur()
+  }
+
+  const clearSearch = () => {
+    setQuery('')
+    setIsOpen(false)
+    inputRef.current?.focus()
+  }
+
+  const getHighlightedField = (result: any, fieldName: string) => {
+    const match = result.matches?.find((m: any) => m.key === fieldName)
+    if (match && match.indices) {
+      return highlightMatch(result.item[fieldName], match.indices)
+    }
+    return result.item[fieldName]
+  }
+
+  return (
+    <div className="relative w-full">
+      {/* Input */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => query.length >= 2 && hasResults && setIsOpen(true)}
+          placeholder="Cerca paziente per nome, CF, telefono, città..."
+          className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+        />
+        {query && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Results */}
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          className="absolute z-50 w-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-y-auto"
+        >
+          {results.length === 0 ? (
+            <div className="px-4 py-8 text-center text-gray-500">
+              <Search className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p>Nessun paziente trovato</p>
+              <p className="text-sm mt-1">Prova con un altro termine</p>
+            </div>
+          ) : (
+            <ul className="py-2">
+              {results.map((result, index) => (
+                <li key={result.item.id}>
+                  <button
+                    onClick={() => handleSelect(result.item)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                    className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors ${
+                      index === selectedIndex ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        <User className="w-5 h-5 text-gray-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900">
+                          {getHighlightedField(result, 'cognome')}{' '}
+                          {getHighlightedField(result, 'nome')}
+                        </div>
+                        <div className="text-sm text-gray-600 font-mono">
+                          {getHighlightedField(result, 'codiceFiscale')}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                          <span>{getHighlightedField(result, 'telefono')}</span>
+                          <span>•</span>
+                          <span>{getHighlightedField(result, 'citta')}</span>
+                        </div>
+                        {result.score !== undefined && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            Rilevanza: {((1 - result.score) * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          
+          {/* Footer hint */}
+          {results.length > 0 && (
+            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
+              <span>Usa ↑ ↓ per navigare, Enter per selezionare</span>
+              <span>{results.length} risultat{results.length !== 1 ? 'i' : 'o'}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+5. Aggiorna pagina pazienti per usare AutocompleteSearch - app/dashboard/pazienti/page.tsx:
+
+import { Plus } from 'lucide-react'
+import Link from 'next/link'
+import PazientiTable from '@/components/pazienti/PazientiTable'
+import AutocompleteSearch from '@/components/pazienti/AutocompleteSearch'
+
+async function getPazienti() {
+  const res = await fetch(`${process.env.NEXTAUTH_URL}/api/pazienti`, { 
+    cache: 'no-store' 
+  })
+  if (!res.ok) throw new Error('Failed to fetch')
+  return res.json()
+}
+
+export default async function PazientiPage() {
+  const pazienti = await getPazienti()
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Pazienti</h1>
+          <p className="text-gray-600 mt-1">Gestisci l'anagrafica dei tuoi pazienti</p>
+        </div>
+        <Link
+          href="/dashboard/pazienti/nuovo"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Nuovo Paziente
+        </Link>
+      </div>
+
+      {/* Fuzzy Search Autocomplete */}
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+          Ricerca Intelligente
+        </h2>
+        <AutocompleteSearch pazienti={pazienti} />
+        <p className="text-sm text-gray-600 mt-2">
+          💡 Prova: "Maro" (trova Mario), "333" (per telefono), "MI" (per città)
+        </p>
+      </div>
+
+      {/* Tabella completa */}
+      <PazientiTable pazienti={pazienti} />
+      
+      <div className="text-sm text-gray-500 text-center">
+        Totale: {pazienti.length} pazient{pazienti.length !== 1 ? 'i' : 'e'}
+      </div>
+    </div>
+  )
+}
+
+6. OPZIONALE: Aggiungi search globale nella sidebar - components/layout/Sidebar.tsx:
+
+Puoi aggiungere una versione compatta dell'autocomplete anche nella sidebar per accesso rapido da qualsiasi pagina.
+
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { 
+  LayoutDashboard, 
+  Users, 
+  Calendar, 
+  FileText, 
+  Settings,
+  Search,
+  Stethoscope
+} from 'lucide-react'
+
+export default function Sidebar() {
+  const pathname = usePathname()
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  const menuItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/pazienti', label: 'Pazienti', icon: Users },
+    { href: '/dashboard/appuntamenti', label: 'Appuntamenti', icon: Calendar },
+    { href: '/dashboard/cartella-clinica', label: 'Cartella Clinica', icon: FileText },
+    { href: '/dashboard/impostazioni', label: 'Impostazioni', icon: Settings }
+  ]
+
+  return (
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      {/* Logo */}
+      <div className="h-16 flex items-center px-6 border-b border-gray-200">
+        <Stethoscope className="w-6 h-6 text-blue-600 mr-2" />
+        <span className="text-xl font-bold text-gray-900">MedicoFlow</span>
+      </div>
+
+      {/* Quick Search Button */}
+      <div className="p-4 border-b border-gray-200">
+        <button
+          onClick={() => setSearchOpen(!searchOpen)}
+          className="w-full flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-600 transition-colors"
+        >
+          <Search className="w-4 h-4" />
+          <span>Cerca paziente...</span>
+          <kbd className="ml-auto px-2 py-0.5 text-xs bg-white border border-gray-300 rounded">
+            Ctrl K
+          </kbd>
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6">
+        <ul className="space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+            
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 text-xs text-gray-500">
+        <p>MedicoFlow v1.0</p>
+        <p className="mt-1">© 2025 Tutti i diritti riservati</p>
+      </div>
+    </aside>
+  )
+}
+
+7. BONUS: Aggiungi shortcut keyboard (Ctrl+K) - app/layout.tsx o componente dedicato:
+
+Puoi creare un modal search globale attivabile con Ctrl+K come Notion/Linear.
+
+RISULTATO ATTESO:
+- Ricerca fuzzy con tolleranza typo funzionante
+- Autocomplete dropdown elegante con highlight
+- Keyboard navigation (↑ ↓ Enter Esc)
+- Click outside chiude dropdown
+- Cerca su: nome, cognome, CF, telefono, città
+- Score rilevanza visualizzato
+- Responsive e accessibile
+
+TESTING:
+1. Vai a /dashboard/pazienti
+2. Nel campo search, digita "Maro" → trova "Mario Bianchi"
+3. Prova "333" → trova per telefono
+4. Prova "RSSMR" → trova per CF parziale
+5. Prova "Milano" → filtra per città
+6. Usa frecce ↑ ↓ per navigare
+7. Premi Enter per selezionare
+8. Premi Esc per chiudere
+9. Click fuori per chiudere
+10. Verifica highlight giallo sui match
+
+PERFORMANCE:
+- Fuse.js è velocissimo anche con 1000+ pazienti
+- Search locale nel browser (zero latenza)
+- Debounce automatico con useMemo
+- Rendering ottimizzato
+
+NOTE:
+- Per database >10K pazienti, considera server-side search
+- Threshold 0.3 = buon bilanciamento (riduci per match più stretti)
+- Distance 100 = tolleranza posizione caratteri

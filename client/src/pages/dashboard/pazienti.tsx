@@ -8,6 +8,7 @@ import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
+import AutocompleteSearch from "@/components/AutocompleteSearch";
 import {
   Dialog,
   DialogContent,
@@ -441,6 +442,24 @@ export default function Pazienti() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Fuzzy Search Autocomplete */}
+      <Card className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              Ricerca Intelligente
+            </h2>
+            <span className="text-xs text-muted-foreground px-2 py-1 bg-background/50 rounded">
+              Fuzzy Search
+            </span>
+          </div>
+          <AutocompleteSearch pazienti={pazienti} />
+          <p className="text-sm text-muted-foreground">
+            💡 <span className="font-medium">Suggerimento:</span> Prova con typo come "Maro" (trova Mario), "333" (telefono), "MI" (Milano)
+          </p>
+        </div>
+      </Card>
 
       <Card className="p-6">
         <div className="space-y-4 mb-6">
