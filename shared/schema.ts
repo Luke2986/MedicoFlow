@@ -72,10 +72,39 @@ export const appuntamenti = pgTable("appuntamenti", {
   medicoIdx: index("medico_idx").on(table.medicoId),
 }));
 
+export const visite = pgTable("visite", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pazienteId: varchar("paziente_id").notNull().references(() => pazienti.id),
+  medicoId: varchar("medico_id").notNull().references(() => users.id),
+  appuntamentoId: varchar("appuntamento_id").references(() => appuntamenti.id),
+  dataVisita: timestamp("data_visita").notNull(),
+  motivoVisita: text("motivo_visita").notNull(),
+  anamnesi: text("anamnesi"),
+  esamiEseguiti: text("esami_eseguiti"),
+  diagnosi: text("diagnosi").notNull(),
+  terapia: text("terapia"),
+  prescrizioneFarmaci: text("prescrizione_farmaci"),
+  noteClinice: text("note_cliniche"),
+  peso: integer("peso"),
+  altezza: integer("altezza"),
+  pressioneSistolica: integer("pressione_sistolica"),
+  pressioneDiastolica: integer("pressione_diastolica"),
+  frequenzaCardiaca: integer("frequenza_cardiaca"),
+  temperatura: integer("temperatura"),
+  ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  dataVisitaIdx: index("data_visita_idx").on(table.dataVisita),
+  pazienteVisitaIdx: index("paziente_visita_idx").on(table.pazienteId),
+  medicoVisitaIdx: index("medico_visita_idx").on(table.medicoId),
+}));
+
 export const ambulatoriRelations = relations(ambulatori, ({ many }) => ({
   users: many(users),
   pazienti: many(pazienti),
   appuntamenti: many(appuntamenti),
+  visite: many(visite),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -84,6 +113,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [ambulatori.id],
   }),
   appuntamenti: many(appuntamenti),
+  visite: many(visite),
 }));
 
 export const pazientiRelations = relations(pazienti, ({ one, many }) => ({
@@ -92,9 +122,10 @@ export const pazientiRelations = relations(pazienti, ({ one, many }) => ({
     references: [ambulatori.id],
   }),
   appuntamenti: many(appuntamenti),
+  visite: many(visite),
 }));
 
-export const appuntamentiRelations = relations(appuntamenti, ({ one }) => ({
+export const appuntamentiRelations = relations(appuntamenti, ({ one, many }) => ({
   paziente: one(pazienti, {
     fields: [appuntamenti.pazienteId],
     references: [pazienti.id],
@@ -105,6 +136,29 @@ export const appuntamentiRelations = relations(appuntamenti, ({ one }) => ({
   }),
   ambulatorio: one(ambulatori, {
     fields: [appuntamenti.ambulatorioId],
+    references: [ambulatori.id],
+  }),
+  visita: one(visite, {
+    fields: [appuntamenti.id],
+    references: [visite.appuntamentoId],
+  }),
+}));
+
+export const visiteRelations = relations(visite, ({ one }) => ({
+  paziente: one(pazienti, {
+    fields: [visite.pazienteId],
+    references: [pazienti.id],
+  }),
+  medico: one(users, {
+    fields: [visite.medicoId],
+    references: [users.id],
+  }),
+  appuntamento: one(appuntamenti, {
+    fields: [visite.appuntamentoId],
+    references: [appuntamenti.id],
+  }),
+  ambulatorio: one(ambulatori, {
+    fields: [visite.ambulatorioId],
     references: [ambulatori.id],
   }),
 }));
@@ -141,6 +195,18 @@ export const insertAppuntamentoSchema = createInsertSchema(appuntamenti).omit({
 
 export const updateAppuntamentoSchema = insertAppuntamentoSchema.partial();
 
+export const insertVisitaSchema = createInsertSchema(visite).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  dataVisita: z.string().transform((val) => new Date(val)),
+  medicoId: z.string().optional(),
+  appuntamentoId: z.string().optional(),
+});
+
+export const updateVisitaSchema = insertVisitaSchema.partial();
+
 export type Ambulatorio = typeof ambulatori.$inferSelect;
 export type InsertAmbulatorio = z.infer<typeof insertAmbulatorioSchema>;
 
@@ -152,3 +218,6 @@ export type InsertPaziente = z.infer<typeof insertPazienteSchema>;
 
 export type Appuntamento = typeof appuntamenti.$inferSelect;
 export type InsertAppuntamento = z.infer<typeof insertAppuntamentoSchema>;
+
+export type Visita = typeof visite.$inferSelect;
+export type InsertVisita = z.infer<typeof insertVisitaSchema>;
