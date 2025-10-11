@@ -7,7 +7,6 @@ export const PLANS = {
       'pazienti',
       'appuntamenti',
       'cartella-clinica',
-      'fuzzy-search',
       'statistiche-base',
       'export-pdf'
     ],

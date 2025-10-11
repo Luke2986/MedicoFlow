@@ -154,6 +154,80 @@ Modelli principali:
 - Validazione date e orari
 - Eliminazione con conferma
 
+## Sistema Pricing Tiers & Feature Flags
+**Implementazione completa gennaio 2025** - Sistema di abbonamento con paywall e upselling feature premium
+
+### Piani Disponibili
+- **BASE** (€89/mese): Gestione base pazienti, appuntamenti, cartella clinica
+  - Features: pazienti, appuntamenti, cartella-clinica, statistiche-base, export-pdf
+  - Limiti: 200 pazienti, 2 utenti
+- **PROFESSIONAL** (€199/mese): Piano consigliato con AI Agent Search
+  - Features BASE + fuzzy-search, ai-agent-search, statistiche-avanzate, analytics-predittive, telemedicina, api-access
+  - Limiti: 1000 pazienti, 5 utenti
+- **ENTERPRISE** (€399/mese): Soluzione completa multi-sede
+  - Features PROFESSIONAL + white-label, supporto-prioritario, account-manager, multi-sede
+  - Limiti: illimitati
+
+### Architettura
+**Schema Database** (`shared/schema.ts`):
+- Table `subscriptions`: ambulatorioId (FK), piano, status (TRIAL/ACTIVE/CANCELLED/EXPIRED), prezzoMensile, features[], dataInizio, dataFine
+- Relazione one-to-one con ambulatori
+
+**Feature Flags** (`shared/features.ts`):
+- `PLANS` config con price, features, limits, description
+- `hasFeature(subscription, 'feature-key')`: verifica accesso feature
+- `canUpgrade/canDowngrade(plan)`: logica upgrade/downgrade
+- **CRITICAL**: Piano BASE NON include 'fuzzy-search' (solo Professional+)
+
+**API Routes** (`server/routes.ts`):
+- GET `/api/subscription?ambulatorioId=X`: recupera subscription
+- PUT `/api/subscription`: aggiorna piano (upgrade/downgrade)
+- Validazione Zod completa
+
+### Componenti UI
+**PricingCard** (`client/src/components/PricingCard.tsx`):
+- Mostra piano con prezzo €X/mese, lista features, badge stato
+- Bottoni upgrade/downgrade condizionali
+- Badge "Consigliato" per PROFESSIONAL
+
+**UpgradePrompt** (`client/src/components/UpgradePrompt.tsx`):
+- Paywall per feature premium bloccate
+- Link diretto a pagina Billing per upgrade
+- Design gradient medicale blue
+
+**Billing Page** (`client/src/pages/dashboard/billing.tsx`):
+- 3 pricing cards affiancate (BASE, PROFESSIONAL, ENTERPRISE)
+- Card piano corrente con info trial/scadenza
+- Upgrade/downgrade con mutation TanStack Query
+- Toast confirmation post-upgrade
+
+### Paywall Implementation
+**AI Agent Search Premium Feature** (`client/src/pages/dashboard/pazienti.tsx`):
+```typescript
+const subscription = useQuery(["/api/subscription", ambulatorioId])
+const hasFuzzySearch = hasFeature(subscription, 'fuzzy-search')
+
+{hasFuzzySearch ? (
+  <Card>AI Agent Search con AutocompleteSearch</Card>
+) : (
+  <UpgradePrompt featureName="AI Agent Search" requiredPlan="PROFESSIONAL" />
+)}
+```
+
+### Feature Matrix Corretta (Post-Fix)
+| Feature | BASE | PROFESSIONAL | ENTERPRISE |
+|---------|------|--------------|------------|
+| Pazienti, Appuntamenti, Cartella | ✅ | ✅ | ✅ |
+| **AI Agent Search (Fuzzy)** | ❌ | ✅ | ✅ |
+| Statistiche Avanzate | ❌ | ✅ | ✅ |
+| Analytics Predittive | ❌ | ✅ | ✅ |
+| White Label, Multi-sede | ❌ | ❌ | ✅ |
+
+### Seeding & Trial
+- Seed crea subscription trial 30 giorni con piano BASE
+- Database seeding automatico in `server/seed.ts`
+- Features sincronizzate con PLANS config
+
 ## Prossimi Sviluppi
 1. Vista calendario appuntamenti (mensile con navigazione)
 2. Sistema cartelle cliniche completo
