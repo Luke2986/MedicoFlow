@@ -78,6 +78,14 @@ Modelli principali:
   - SQL date arithmetic timezone-safe per filtro età
   - UI collapsible con clear dinamico
 - Gestione appuntamenti: CRUD completo (Create, Read, Update, Delete)
+- **Calendario Appuntamenti Integrato** (gennaio 2025):
+  - Toggle vista Lista/Calendario seamless
+  - Vista calendario mensile con griglia 7 giorni
+  - Navigazione mesi (prev/next) e bottone "Oggi"
+  - Creazione appuntamento da calendario (data pre-selezionata)
+  - Edit appuntamento diretto da click su calendario
+  - Aggregazione appuntamenti per giorno
+  - Badge stato colorati per ogni appuntamento
 - Backend API completo con validazione Zod (POST, GET, PATCH, DELETE)
 - Update schemas con .partial() per aggiornamenti parziali
 - Database seeding automatico con ambulatorio di default
