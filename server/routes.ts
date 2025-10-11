@@ -11,6 +11,7 @@ import {
   updateAppuntamentoSchema,
   insertVisitaSchema,
   updateVisitaSchema,
+  updateSubscriptionSchema,
 } from "@shared/schema";
 
 const statsQuerySchema = z.object({
@@ -381,6 +382,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? Math.round((appuntamentiSettimana.length / 7) * 100) 
           : 0,
       });
+    } catch (error) {
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  // Subscription routes
+  app.get("/api/subscription", async (req, res) => {
+    try {
+      const validation = z.object({
+        ambulatorioId: z.string()
+      }).safeParse(req.query);
+
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "ambulatorioId richiesto", 
+          details: validation.error.issues 
+        });
+      }
+
+      const subscription = await storage.getSubscription(validation.data.ambulatorioId);
+      
+      if (!subscription) {
+        return res.status(404).json({ error: "Subscription non trovata" });
+      }
+
+      res.json(subscription);
+    } catch (error) {
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  app.put("/api/subscription", async (req, res) => {
+    try {
+      const validation = updateSubscriptionSchema.extend({
+        ambulatorioId: z.string() // Richiesto per PUT
+      }).safeParse(req.body);
+
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Dati non validi", 
+          details: validation.error.issues 
+        });
+      }
+
+      const { ambulatorioId, ...updateData } = validation.data;
+      const updatedSubscription = await storage.updateSubscription(ambulatorioId, updateData);
+
+      res.json(updatedSubscription);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
     }
