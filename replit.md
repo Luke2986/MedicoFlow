@@ -77,6 +77,12 @@ Modelli principali:
   - Validazione backend robusta (NaN guards, range 0-150 anni)
   - SQL date arithmetic timezone-safe per filtro età
   - UI collapsible con clear dinamico
+- **Validazione CF e Sorting** (gennaio 2025):
+  - Codice Fiscale: algoritmo checksum completo (mappe odd/even, controllo carattere)
+  - Provincia: validazione regex /^[A-Za-z]{2}$/ + transform uppercase
+  - Sorting pazienti: cognome/data/città, toggle asc/desc, stable comparator
+  - Form fix: Select HTML nativi per FormData compatibility
+  - Error messages italiano dettagliati
 - Gestione appuntamenti: CRUD completo (Create, Read, Update, Delete)
 - **Calendario Appuntamenti Integrato** (gennaio 2025):
   - Toggle vista Lista/Calendario seamless
@@ -110,9 +116,20 @@ Modelli principali:
 
 ### Gestione Pazienti
 - Creazione con validazione completa
+- **Validazione Codice Fiscale Completa** (gennaio 2025):
+  - Algoritmo checksum italiano con mappe odd/even
+  - Calcolo carattere di controllo secondo normativa
+  - Utility shared/validators.ts riutilizzabile
+  - Validazione provincia (solo lettere, auto uppercase)
+  - Error messages dettagliati in italiano
+- **Sorting Intelligente** (gennaio 2025):
+  - Ordinamento per cognome, data nascita, città
+  - Toggle asc/desc con indicatori visuali (↑↓)
+  - Stable sorting con comparator ottimizzato
+  - UI moderna con bottoni state-aware
 - Ricerca fulltext (nome, cognome, codice fiscale)
 - Eliminazione con conferma
-- Validazione codice fiscale univoco
+- Form compatibilità FormData (HTML select nativi)
 
 ### Gestione Appuntamenti  
 - Creazione con selezione paziente
