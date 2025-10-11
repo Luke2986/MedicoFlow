@@ -86,6 +86,13 @@ Modelli principali:
   - Edit appuntamento diretto da click su calendario
   - Aggregazione appuntamenti per giorno
   - Badge stato colorati per ogni appuntamento
+- **Integrazione Pazienti → Cartella Clinica** (gennaio 2025):
+  - Link "Visualizza Cartella" con icona FileText in card pazienti
+  - URL params per paziente pre-selezionato (?pazienteId=X)
+  - Auto-selezione paziente da query string con useEffect
+  - Breadcrumb navigation completo: Dashboard > Pazienti > [Nome] > Cartella Clinica
+  - Navigazione bidirezionale con Link wouter
+  - Timeline visite visibile immediatamente dopo selezione
 - Backend API completo con validazione Zod (POST, GET, PATCH, DELETE)
 - Update schemas con .partial() per aggiornamenti parziali
 - Database seeding automatico con ambulatorio di default
