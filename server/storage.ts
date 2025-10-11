@@ -53,6 +53,7 @@ export interface IStorage {
   getAppuntamentiByPaziente(pazienteId: string): Promise<Appuntamento[]>;
   getAppuntamentiByMedico(medicoId: string): Promise<Appuntamento[]>;
   getAppuntamentiByDate(ambulatorioId: string, date: Date): Promise<Appuntamento[]>;
+  getAppuntamentiByWeek(ambulatorioId: string, weekStart: Date, weekEnd: Date): Promise<Appuntamento[]>;
   createAppuntamento(appuntamento: InsertAppuntamento): Promise<Appuntamento>;
   updateAppuntamento(id: string, appuntamento: Partial<InsertAppuntamento>): Promise<Appuntamento>;
   deleteAppuntamento(id: string): Promise<void>;
@@ -274,6 +275,20 @@ export class DatabaseStorage implements IStorage {
           eq(appuntamenti.ambulatorioId, ambulatorioId),
           sql`${appuntamenti.dataOra} >= ${startOfDay}`,
           sql`${appuntamenti.dataOra} <= ${endOfDay}`
+        )
+      )
+      .orderBy(appuntamenti.dataOra);
+  }
+
+  async getAppuntamentiByWeek(ambulatorioId: string, weekStart: Date, weekEnd: Date): Promise<Appuntamento[]> {
+    return await db
+      .select()
+      .from(appuntamenti)
+      .where(
+        and(
+          eq(appuntamenti.ambulatorioId, ambulatorioId),
+          sql`${appuntamenti.dataOra} >= ${weekStart}`,
+          sql`${appuntamenti.dataOra} <= ${weekEnd}`
         )
       )
       .orderBy(appuntamenti.dataOra);

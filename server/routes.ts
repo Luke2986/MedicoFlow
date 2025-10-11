@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { startOfWeek, endOfWeek } from "date-fns";
 import { 
   insertAmbulatorioSchema,
   insertUserSchema,
@@ -206,7 +207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (medicoId && typeof medicoId === 'string') {
         appuntamenti = await storage.getAppuntamentiByMedico(medicoId);
       } else if (date && typeof date === 'string') {
-        appuntamenti = await storage.getAppuntamentiByDate(ambulatorioId, new Date(date));
+        const targetDate = new Date(date);
+        const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
+        appuntamenti = await storage.getAppuntamentiByWeek(ambulatorioId, weekStart, weekEnd);
       } else {
         appuntamenti = await storage.getAppuntamenti(ambulatorioId);
       }
@@ -240,6 +244,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
         }
+      }
+
+      const newStart = new Date(data.dataOra);
+      const newEnd = new Date(newStart.getTime() + (data.durata || 30) * 60000);
+
+      const existingAppuntamenti = await storage.getAppuntamentiByMedico(data.medicoId!);
+      
+      const hasConflict = existingAppuntamenti.some(apt => {
+        const aptStart = new Date(apt.dataOra);
+        const aptEnd = new Date(aptStart.getTime() + apt.durata * 60000);
+        return (newStart < aptEnd && newEnd > aptStart);
+      });
+
+      if (hasConflict) {
+        return res.status(409).json({ error: "Conflitto: esiste già un appuntamento in questo orario" });
       }
       
       const appuntamento = await storage.createAppuntamento(data);
