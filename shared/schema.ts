@@ -134,6 +134,7 @@ export const insertAppuntamentoSchema = createInsertSchema(appuntamenti).omit({
   updatedAt: true,
 }).extend({
   dataOra: z.string().transform((val) => new Date(val)),
+  medicoId: z.string().optional(),
 });
 
 export type Ambulatorio = typeof ambulatori.$inferSelect;

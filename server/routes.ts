@@ -197,9 +197,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/appuntamenti", async (req, res) => {
     try {
       const data = insertAppuntamentoSchema.parse(req.body);
+      
+      if (!data.medicoId && data.ambulatorioId) {
+        const medici = await storage.getUsersByAmbulatorio(data.ambulatorioId);
+        if (medici.length > 0) {
+          data.medicoId = medici[0].id;
+        } else {
+          return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
+        }
+      }
+      
       const appuntamento = await storage.createAppuntamento(data);
       res.status(201).json(appuntamento);
     } catch (error) {
+      console.error("Errore creazione appuntamento:", error);
       res.status(400).json({ error: "Dati non validi" });
     }
   });

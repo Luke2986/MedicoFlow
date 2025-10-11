@@ -85,7 +85,6 @@ export default function Appuntamenti() {
     
     const data = {
       pazienteId: formData.get("pazienteId") as string,
-      medicoId: "default-medico-id",
       dataOra: new Date(formData.get("data") as string + "T" + formData.get("ora") as string).toISOString(),
       durata: parseInt(formData.get("durata") as string),
       tipo: formData.get("tipo") as string,
