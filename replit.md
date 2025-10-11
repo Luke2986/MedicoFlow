@@ -106,13 +106,17 @@ Modelli principali:
   - **Backend join pazienti**: innerJoin popola relazione paziente in query appuntamenti
   - **WeekCalendar controllato**: componente riceve currentDate come prop per sync parent
   - Toggle vista Lista/Settimana seamless con empty states
-- **Integrazione Pazienti → Cartella Clinica** (gennaio 2025):
-  - Link "Visualizza Cartella" con icona FileText in card pazienti
-  - URL params per paziente pre-selezionato (?pazienteId=X)
-  - Auto-selezione paziente da query string con useEffect
-  - Breadcrumb navigation completo: Dashboard > Pazienti > [Nome] > Cartella Clinica
-  - Navigazione bidirezionale con Link wouter
-  - Timeline visite visibile immediatamente dopo selezione
+- **Cartella Clinica Digitale** (ottobre 2025):
+  - Form completo visita medica con struttura standardizzata
+  - Campi: Data visita, Motivo visita, Anamnesi, **Esame Obiettivo**, Esami Strumentali/Laboratorio, Diagnosi, Terapia, Prescrizioni, Note cliniche
+  - Parametri vitali: Peso, Altezza, PA sistolica/diastolica, FC, Temperatura
+  - Storico visite cronologico con visualizzazione dettagliata
+  - CRUD completo: creazione, modifica, eliminazione visite
+  - Selezione paziente con dropdown + URL params (?pazienteId=X)
+  - Link opzionale con appuntamenti (appuntamentoId)
+  - Breadcrumb navigation: Dashboard > Pazienti > [Nome] > Cartella Clinica
+  - Visualizzazione condizionale sezioni (solo se compilate)
+  - Dark mode support completo
 - Backend API completo con validazione Zod (POST, GET, PATCH, DELETE)
 - Update schemas con .partial() per aggiornamenti parziali
 - Database seeding automatico con ambulatorio di default
@@ -165,6 +169,25 @@ Modelli principali:
 - Stati appuntamento: confermato, completato, cancellato, no-show
 - Toggle vista Lista/Settimana con empty states
 - Backend innerJoin pazienti per performance (evita N+1 queries)
+
+### Cartella Clinica Digitale
+- **Form Visita Medica Strutturato** (ottobre 2025):
+  - Sezioni standard: Anamnesi, Esame Obiettivo, Esami Strumentali/Lab, Diagnosi, Terapia, Prescrizioni
+  - Parametri vitali: Peso, Altezza, PA (sistolica/diastolica), FC, Temperatura
+  - Campi opzionali con visualizzazione condizionale (mostrati solo se compilati)
+  - Diagnosi obbligatoria per compliance medica
+- **Storico Visite Cronologico**:
+  - Ordinamento temporale decrescente (visita più recente in alto)
+  - Card espanse con tutti i dettagli clinici
+  - Badge colorati per parametri vitali
+  - Edit e delete con conferma per ogni visita
+- **Integrazione Pazienti**:
+  - Selezione paziente con dropdown searchable
+  - URL params (?pazienteId=X) per pre-selezione da altre pagine
+  - Breadcrumb navigation: Dashboard > Pazienti > [Nome] > Cartella Clinica
+  - Link opzionale con appuntamenti tramite appuntamentoId
+- Empty states informativi quando nessuna visita registrata
+- Dark mode support completo
 
 ## Sistema Pricing Tiers & Feature Flags
 **Implementazione completa gennaio 2025** - Sistema di abbonamento con paywall e upselling feature premium
