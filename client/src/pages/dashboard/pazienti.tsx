@@ -1,11 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Users, Plus, Search, Pencil, Trash2, Filter, X } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -29,18 +35,34 @@ import type { Paziente } from "@shared/schema";
 export default function Pazienti() {
   const { ambulatorioId } = useAmbulatorio();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    sesso: "",
+    citta: "",
+    provincia: "",
+    etaMin: "",
+    etaMax: "",
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPaziente, setSelectedPaziente] = useState<Paziente | null>(null);
   const { toast } = useToast();
 
+  // Debounce per search query
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
   const { data: pazienti = [], isLoading } = useQuery<Paziente[]>({
-    queryKey: ["/api/pazienti", ambulatorioId, searchQuery],
+    queryKey: ["/api/pazienti", ambulatorioId, debouncedSearch, filters],
     queryFn: () => {
-      const url = searchQuery
-        ? `/api/pazienti?ambulatorioId=${ambulatorioId}&search=${searchQuery}`
-        : `/api/pazienti?ambulatorioId=${ambulatorioId}`;
-      return fetch(url).then(r => r.json());
+      const params = new URLSearchParams({ ambulatorioId });
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      if (filters.sesso) params.append('sesso', filters.sesso);
+      if (filters.citta) params.append('citta', filters.citta);
+      if (filters.provincia) params.append('provincia', filters.provincia);
+      if (filters.etaMin) params.append('etaMin', filters.etaMin);
+      if (filters.etaMax) params.append('etaMax', filters.etaMax);
+      
+      return fetch(`/api/pazienti?${params.toString()}`).then(r => r.json());
     },
     enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
   });
@@ -393,17 +415,111 @@ export default function Pazienti() {
       </Dialog>
 
       <Card className="p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca per nome, cognome o codice fiscale..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              data-testid="input-search-patients"
-            />
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca per nome, cognome o codice fiscale..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                data-testid="input-search-patients"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+              data-testid="button-toggle-filters"
+            >
+              <Filter className="w-4 h-4" />
+              {showFilters ? 'Nascondi Filtri' : 'Filtri Avanzati'}
+            </Button>
+            {(filters.sesso || filters.citta || filters.provincia || filters.etaMin || filters.etaMax) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilters({ sesso: "", citta: "", provincia: "", etaMin: "", etaMax: "" })}
+                className="gap-2"
+                data-testid="button-clear-filters"
+              >
+                <X className="w-4 h-4" />
+                Azzera Filtri
+              </Button>
+            )}
           </div>
+
+          <Collapsible open={showFilters}>
+            <CollapsibleContent className="space-y-4 border-t pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="space-y-2">
+                  <Label>Sesso</Label>
+                  <Select
+                    value={filters.sesso || undefined}
+                    onValueChange={(value) => setFilters({ ...filters, sesso: value || "" })}
+                  >
+                    <SelectTrigger data-testid="select-filter-sesso">
+                      <SelectValue placeholder="Tutti" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Maschio</SelectItem>
+                      <SelectItem value="F">Femmina</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Città</Label>
+                  <Input
+                    placeholder="Es: Milano"
+                    value={filters.citta}
+                    onChange={(e) => setFilters({ ...filters, citta: e.target.value })}
+                    data-testid="input-filter-citta"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Provincia</Label>
+                  <Input
+                    placeholder="Es: MI"
+                    maxLength={2}
+                    className="uppercase"
+                    value={filters.provincia}
+                    onChange={(e) => setFilters({ ...filters, provincia: e.target.value.toUpperCase() })}
+                    data-testid="input-filter-provincia"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Età Min</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="120"
+                    placeholder="Es: 18"
+                    value={filters.etaMin}
+                    onChange={(e) => setFilters({ ...filters, etaMin: e.target.value })}
+                    data-testid="input-filter-eta-min"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Età Max</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="120"
+                    placeholder="Es: 65"
+                    value={filters.etaMax}
+                    onChange={(e) => setFilters({ ...filters, etaMax: e.target.value })}
+                    data-testid="input-filter-eta-max"
+                  />
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {isLoading ? (

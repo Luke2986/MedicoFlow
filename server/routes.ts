@@ -84,15 +84,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/pazienti", async (req, res) => {
     try {
-      const { ambulatorioId, search } = req.query;
+      const { ambulatorioId, search, sesso, citta, provincia, etaMin, etaMax } = req.query;
       
       if (!ambulatorioId || typeof ambulatorioId !== 'string') {
         return res.status(400).json({ error: "ambulatorioId richiesto" });
       }
 
+      // Se ci sono filtri avanzati, usa searchPazientiAdvanced
+      const hasAdvancedFilters = sesso || citta || provincia || etaMin || etaMax;
+      
       let pazienti;
-      if (search && typeof search === 'string') {
-        pazienti = await storage.searchPazienti(ambulatorioId, search);
+      if (search || hasAdvancedFilters) {
+        const filters: any = {};
+        if (search && typeof search === 'string') filters.query = search;
+        if (sesso && typeof sesso === 'string') filters.sesso = sesso;
+        if (citta && typeof citta === 'string') filters.citta = citta;
+        if (provincia && typeof provincia === 'string') filters.provincia = provincia;
+        
+        // Valida età min con guard NaN e valori negativi
+        if (etaMin && typeof etaMin === 'string') {
+          const parsedMin = parseInt(etaMin, 10);
+          if (!isNaN(parsedMin) && parsedMin >= 0 && parsedMin <= 150) {
+            filters.etaMin = parsedMin;
+          }
+        }
+        
+        // Valida età max con guard NaN e valori negativi
+        if (etaMax && typeof etaMax === 'string') {
+          const parsedMax = parseInt(etaMax, 10);
+          if (!isNaN(parsedMax) && parsedMax >= 0 && parsedMax <= 150) {
+            filters.etaMax = parsedMax;
+          }
+        }
+        
+        pazienti = await storage.searchPazientiAdvanced(ambulatorioId, filters);
       } else {
         pazienti = await storage.getPazienti(ambulatorioId);
       }

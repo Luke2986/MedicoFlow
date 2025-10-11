@@ -30,6 +30,14 @@ export interface IStorage {
   getPaziente(id: string): Promise<Paziente | undefined>;
   getPazienteByCodiceFiscale(codiceFiscale: string): Promise<Paziente | undefined>;
   searchPazienti(ambulatorioId: string, query: string): Promise<Paziente[]>;
+  searchPazientiAdvanced(ambulatorioId: string, filters: {
+    query?: string;
+    sesso?: string;
+    citta?: string;
+    provincia?: string;
+    etaMin?: number;
+    etaMax?: number;
+  }): Promise<Paziente[]>;
   createPaziente(paziente: InsertPaziente): Promise<Paziente>;
   updatePaziente(id: string, paziente: Partial<InsertPaziente>): Promise<Paziente>;
   deletePaziente(id: string): Promise<void>;
@@ -120,6 +128,66 @@ export class DatabaseStorage implements IStorage {
           )
         )
       )
+      .orderBy(pazienti.cognome, pazienti.nome);
+  }
+
+  async searchPazientiAdvanced(
+    ambulatorioId: string, 
+    filters: {
+      query?: string;
+      sesso?: string;
+      citta?: string;
+      provincia?: string;
+      etaMin?: number;
+      etaMax?: number;
+    }
+  ): Promise<Paziente[]> {
+    const conditions = [eq(pazienti.ambulatorioId, ambulatorioId)];
+
+    // Text search su nome, cognome, codice fiscale
+    if (filters.query && filters.query.trim()) {
+      const searchPattern = `%${filters.query.toLowerCase()}%`;
+      conditions.push(
+        or(
+          sql`LOWER(${pazienti.nome}) LIKE ${searchPattern}`,
+          sql`LOWER(${pazienti.cognome}) LIKE ${searchPattern}`,
+          sql`LOWER(${pazienti.codiceFiscale}) LIKE ${searchPattern}`
+        )!
+      );
+    }
+
+    // Filtro sesso
+    if (filters.sesso) {
+      conditions.push(eq(pazienti.sesso, filters.sesso));
+    }
+
+    // Filtro città
+    if (filters.citta) {
+      conditions.push(sql`LOWER(${pazienti.citta}) = ${filters.citta.toLowerCase()}`);
+    }
+
+    // Filtro provincia
+    if (filters.provincia) {
+      conditions.push(eq(pazienti.provincia, filters.provincia.toUpperCase()));
+    }
+
+    // Filtro età usando SQL date arithmetic (timezone-safe)
+    if (filters.etaMin !== undefined) {
+      // Per età minima: paziente deve essere nato <= (CURRENT_DATE - etaMin anni)
+      // Esempio: etaMin=24 → nati prima o uguale a 24 anni fa → 24+ anni
+      conditions.push(sql`${pazienti.dataNascita} <= (CURRENT_DATE - INTERVAL '${sql.raw(filters.etaMin.toString())} years')`);
+    }
+
+    if (filters.etaMax !== undefined) {
+      // Per età massima: paziente deve essere nato > (CURRENT_DATE - (etaMax + 1) anni)
+      // Esempio: etaMax=45 → nati dopo 46 anni fa → 0-45 anni (incluso chi ha compiuto 45 anni)
+      conditions.push(sql`${pazienti.dataNascita} > (CURRENT_DATE - INTERVAL '${sql.raw((filters.etaMax + 1).toString())} years')`);
+    }
+
+    return await db
+      .select()
+      .from(pazienti)
+      .where(and(...conditions))
       .orderBy(pazienti.cognome, pazienti.nome);
   }
 
