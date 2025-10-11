@@ -128,6 +128,8 @@ export const insertPazienteSchema = createInsertSchema(pazienti).omit({
   dataNascita: z.string().transform((val) => new Date(val)),
 });
 
+export const updatePazienteSchema = insertPazienteSchema.partial();
+
 export const insertAppuntamentoSchema = createInsertSchema(appuntamenti).omit({
   id: true,
   createdAt: true,
@@ -136,6 +138,8 @@ export const insertAppuntamentoSchema = createInsertSchema(appuntamenti).omit({
   dataOra: z.string().transform((val) => new Date(val)),
   medicoId: z.string().optional(),
 });
+
+export const updateAppuntamentoSchema = insertAppuntamentoSchema.partial();
 
 export type Ambulatorio = typeof ambulatori.$inferSelect;
 export type InsertAmbulatorio = z.infer<typeof insertAmbulatorioSchema>;

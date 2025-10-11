@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus, Clock, User } from "lucide-react";
+import { Calendar, Plus, Clock, User, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -29,6 +29,8 @@ import type { Appuntamento, Paziente } from "@shared/schema";
 export default function Appuntamenti() {
   const { ambulatorioId } = useAmbulatorio();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedAppuntamento, setSelectedAppuntamento] = useState<Appuntamento | null>(null);
   const { toast } = useToast();
 
   const { data: appuntamenti = [], isLoading } = useQuery<Appuntamento[]>({
@@ -65,6 +67,29 @@ export default function Appuntamenti() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PATCH", `/api/appuntamenti/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/appuntamenti"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      setEditDialogOpen(false);
+      setSelectedAppuntamento(null);
+      toast({
+        title: "Appuntamento aggiornato",
+        description: "L'appuntamento è stato modificato con successo",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile aggiornare l'appuntamento",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/appuntamenti/${id}`, undefined);
@@ -95,6 +120,25 @@ export default function Appuntamenti() {
     };
 
     createMutation.mutate(data);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedAppuntamento) return;
+    
+    const formData = new FormData(e.currentTarget);
+    
+    const data = {
+      pazienteId: formData.get("pazienteId") as string,
+      dataOra: new Date(formData.get("data") as string + "T" + formData.get("ora") as string).toISOString(),
+      durata: parseInt(formData.get("durata") as string),
+      tipo: formData.get("tipo") as string,
+      stato: formData.get("stato") as string,
+      motivoVisita: formData.get("motivoVisita") as string || null,
+      note: formData.get("note") as string || null,
+    };
+
+    updateMutation.mutate({ id: selectedAppuntamento.id, data });
   };
 
   const getStatusColor = (stato: string) => {
@@ -217,6 +261,126 @@ export default function Appuntamenti() {
         </Dialog>
       </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Modifica Appuntamento</DialogTitle>
+            <DialogDescription>
+              Modifica i dettagli dell'appuntamento
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAppuntamento && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-pazienteId">Paziente *</Label>
+                <Select name="pazienteId" required defaultValue={selectedAppuntamento.pazienteId}>
+                  <SelectTrigger data-testid="select-edit-patient">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pazienti.map((paz) => (
+                      <SelectItem key={paz.id} value={paz.id}>
+                        {paz.cognome} {paz.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-data">Data *</Label>
+                  <Input 
+                    id="edit-data" 
+                    name="data" 
+                    type="date" 
+                    required 
+                    defaultValue={new Date(selectedAppuntamento.dataOra).toISOString().split('T')[0]}
+                    data-testid="input-edit-date" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ora">Ora *</Label>
+                  <Input 
+                    id="edit-ora" 
+                    name="ora" 
+                    type="time" 
+                    required 
+                    defaultValue={new Date(selectedAppuntamento.dataOra).toTimeString().slice(0, 5)}
+                    data-testid="input-edit-time" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tipo">Tipo Visita *</Label>
+                  <Select name="tipo" required defaultValue={selectedAppuntamento.tipo}>
+                    <SelectTrigger data-testid="select-edit-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Prima visita">Prima visita</SelectItem>
+                      <SelectItem value="Controllo">Controllo</SelectItem>
+                      <SelectItem value="Urgente">Urgente</SelectItem>
+                      <SelectItem value="Esame">Esame</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-durata">Durata (min) *</Label>
+                  <Select name="durata" defaultValue={selectedAppuntamento.durata.toString()}>
+                    <SelectTrigger data-testid="select-edit-duration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minuti</SelectItem>
+                      <SelectItem value="30">30 minuti</SelectItem>
+                      <SelectItem value="45">45 minuti</SelectItem>
+                      <SelectItem value="60">60 minuti</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-stato">Stato *</Label>
+                <Select name="stato" required defaultValue={selectedAppuntamento.stato}>
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="confermato">Confermato</SelectItem>
+                    <SelectItem value="in_attesa">In Attesa</SelectItem>
+                    <SelectItem value="cancellato">Cancellato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-motivoVisita">Motivo della Visita</Label>
+                <Input id="edit-motivoVisita" name="motivoVisita" defaultValue={selectedAppuntamento.motivoVisita || ''} data-testid="input-edit-reason" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-note">Note</Label>
+                <Input id="edit-note" name="note" defaultValue={selectedAppuntamento.note || ''} data-testid="input-edit-notes" />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-edit">
+                  Annulla
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-edit-appointment">
+                  {updateMutation.isPending ? "Salvataggio..." : "Salva Modifiche"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card className="p-6">
         {pazienti.length === 0 ? (
           <div className="text-center py-16">
@@ -287,13 +451,24 @@ export default function Appuntamenti() {
                       variant="ghost" 
                       size="icon"
                       onClick={() => {
+                        setSelectedAppuntamento(app);
+                        setEditDialogOpen(true);
+                      }}
+                      data-testid={`button-edit-${app.id}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => {
                         if (confirm(`Eliminare questo appuntamento?`)) {
                           deleteMutation.mutate(app.id);
                         }
                       }}
                       data-testid={`button-delete-${app.id}`}
                     >
-                      <Clock className="w-4 h-4 text-destructive" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 </div>

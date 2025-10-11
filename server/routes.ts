@@ -6,7 +6,9 @@ import {
   insertAmbulatorioSchema,
   insertUserSchema,
   insertPazienteSchema,
+  updatePazienteSchema,
   insertAppuntamentoSchema,
+  updateAppuntamentoSchema,
 } from "@shared/schema";
 
 const statsQuerySchema = z.object({
@@ -140,9 +142,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/pazienti/:id", async (req, res) => {
     try {
-      const paziente = await storage.updatePaziente(req.params.id, req.body);
+      const data = updatePazienteSchema.parse(req.body);
+      const paziente = await storage.updatePaziente(req.params.id, data);
       res.json(paziente);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Errore update paziente:", error);
       res.status(400).json({ error: "Errore durante l'aggiornamento" });
     }
   });
@@ -217,9 +221,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/appuntamenti/:id", async (req, res) => {
     try {
-      const appuntamento = await storage.updateAppuntamento(req.params.id, req.body);
+      const data = updateAppuntamentoSchema.parse(req.body);
+      const appuntamento = await storage.updateAppuntamento(req.params.id, data);
       res.json(appuntamento);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Errore update appuntamento:", error);
       res.status(400).json({ error: "Errore durante l'aggiornamento" });
     }
   });

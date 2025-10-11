@@ -30,6 +30,8 @@ export default function Pazienti() {
   const { ambulatorioId } = useAmbulatorio();
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedPaziente, setSelectedPaziente] = useState<Paziente | null>(null);
   const { toast } = useToast();
 
   const { data: pazienti = [], isLoading } = useQuery<Paziente[]>({
@@ -60,6 +62,29 @@ export default function Pazienti() {
       toast({
         title: "Errore",
         description: error.message || "Impossibile aggiungere il paziente",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PATCH", `/api/pazienti/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pazienti"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      setEditDialogOpen(false);
+      setSelectedPaziente(null);
+      toast({
+        title: "Paziente aggiornato",
+        description: "I dati del paziente sono stati modificati con successo",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile aggiornare il paziente",
         variant: "destructive",
       });
     },
@@ -101,6 +126,31 @@ export default function Pazienti() {
     };
 
     createMutation.mutate(data);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedPaziente) return;
+    
+    const formData = new FormData(e.currentTarget);
+    
+    const data = {
+      nome: formData.get("nome") as string,
+      cognome: formData.get("cognome") as string,
+      codiceFiscale: formData.get("codiceFiscale") as string,
+      dataNascita: formData.get("dataNascita") as string,
+      luogoNascita: formData.get("luogoNascita") as string,
+      sesso: formData.get("sesso") as string,
+      indirizzo: formData.get("indirizzo") as string,
+      citta: formData.get("citta") as string,
+      provincia: formData.get("provincia") as string,
+      cap: formData.get("cap") as string,
+      telefono: formData.get("telefono") as string,
+      email: formData.get("email") as string || null,
+      note: formData.get("note") as string || null,
+    };
+
+    updateMutation.mutate({ id: selectedPaziente.id, data });
   };
 
   return (
@@ -226,6 +276,122 @@ export default function Pazienti() {
         </Dialog>
       </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifica Paziente</DialogTitle>
+            <DialogDescription>
+              Modifica i dati anagrafici del paziente
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPaziente && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nome">Nome *</Label>
+                  <Input id="edit-nome" name="nome" required defaultValue={selectedPaziente.nome} data-testid="input-edit-nome" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cognome">Cognome *</Label>
+                  <Input id="edit-cognome" name="cognome" required defaultValue={selectedPaziente.cognome} data-testid="input-edit-cognome" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-codiceFiscale">Codice Fiscale *</Label>
+                  <Input 
+                    id="edit-codiceFiscale" 
+                    name="codiceFiscale" 
+                    required 
+                    maxLength={16}
+                    className="uppercase"
+                    defaultValue={selectedPaziente.codiceFiscale}
+                    data-testid="input-edit-codice-fiscale"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dataNascita">Data di Nascita *</Label>
+                  <Input 
+                    id="edit-dataNascita" 
+                    name="dataNascita" 
+                    type="date" 
+                    required 
+                    defaultValue={new Date(selectedPaziente.dataNascita).toISOString().split('T')[0]}
+                    data-testid="input-edit-data-nascita" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-luogoNascita">Luogo di Nascita *</Label>
+                  <Input id="edit-luogoNascita" name="luogoNascita" required defaultValue={selectedPaziente.luogoNascita} data-testid="input-edit-luogo-nascita" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sesso">Sesso *</Label>
+                  <Select name="sesso" required defaultValue={selectedPaziente.sesso}>
+                    <SelectTrigger data-testid="select-edit-sesso">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Maschio</SelectItem>
+                      <SelectItem value="F">Femmina</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-indirizzo">Indirizzo *</Label>
+                <Input id="edit-indirizzo" name="indirizzo" required defaultValue={selectedPaziente.indirizzo} data-testid="input-edit-indirizzo" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-citta">Città *</Label>
+                  <Input id="edit-citta" name="citta" required defaultValue={selectedPaziente.citta} data-testid="input-edit-citta" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-provincia">Provincia *</Label>
+                  <Input id="edit-provincia" name="provincia" required maxLength={2} className="uppercase" defaultValue={selectedPaziente.provincia} data-testid="input-edit-provincia" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cap">CAP *</Label>
+                  <Input id="edit-cap" name="cap" required maxLength={5} defaultValue={selectedPaziente.cap} data-testid="input-edit-cap" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-telefono">Telefono *</Label>
+                  <Input id="edit-telefono" name="telefono" type="tel" required defaultValue={selectedPaziente.telefono} data-testid="input-edit-telefono" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input id="edit-email" name="email" type="email" defaultValue={selectedPaziente.email || ''} data-testid="input-edit-email" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-note">Note</Label>
+                <Input id="edit-note" name="note" defaultValue={selectedPaziente.note || ''} data-testid="input-edit-note" />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-edit">
+                  Annulla
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-edit-patient">
+                  {updateMutation.isPending ? "Salvataggio..." : "Salva Modifiche"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card className="p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1 max-w-md">
@@ -284,7 +450,15 @@ export default function Pazienti() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" data-testid={`button-edit-${paziente.id}`}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                      setSelectedPaziente(paziente);
+                      setEditDialogOpen(true);
+                    }}
+                    data-testid={`button-edit-${paziente.id}`}
+                  >
                     <Pencil className="w-4 h-4" />
                   </Button>
                   <Button 
