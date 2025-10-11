@@ -3,6 +3,7 @@ import { pgTable, text, varchar, timestamp, integer, index } from "drizzle-orm/p
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { validateCodiceFiscale } from "./validators";
 
 export const ambulatori = pgTable("ambulatori", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -181,6 +182,20 @@ export const insertPazienteSchema = createInsertSchema(pazienti).omit({
   updatedAt: true,
 }).extend({
   dataNascita: z.string().transform((val) => new Date(val)),
+  codiceFiscale: z.string()
+    .length(16, 'Il Codice Fiscale deve essere di 16 caratteri')
+    .refine(validateCodiceFiscale, {
+      message: 'Codice Fiscale non valido (verificare carattere di controllo)'
+    })
+    .transform((val) => val.toUpperCase()),
+  provincia: z.string()
+    .length(2, 'Provincia deve essere 2 lettere (es. MI)')
+    .regex(/^[A-Za-z]{2}$/, 'Provincia deve contenere solo lettere')
+    .transform((val) => val.toUpperCase()),
+  cap: z.string()
+    .regex(/^\d{5}$/, 'CAP deve essere 5 cifre'),
+  telefono: z.string()
+    .regex(/^(\+39)?[\s]?[0-9]{9,10}$/, 'Telefono non valido (9-10 cifre)'),
 });
 
 export const updatePazienteSchema = insertPazienteSchema.partial();

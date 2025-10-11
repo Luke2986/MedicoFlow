@@ -163,6 +163,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.code === '23505') {
         return res.status(409).json({ error: "Codice fiscale già esistente" });
       }
+      if (error.errors) {
+        return res.status(400).json({ error: "Dati non validi", details: error.errors });
+      }
       res.status(400).json({ error: "Dati non validi" });
     }
   });

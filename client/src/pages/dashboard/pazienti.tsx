@@ -1,12 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText } from "lucide-react";
+import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   Dialog,
@@ -44,6 +44,8 @@ export default function Pazienti() {
     etaMin: "",
     etaMax: "",
   });
+  const [sortBy, setSortBy] = useState<'cognome' | 'dataNascita' | 'citta'>('cognome');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedPaziente, setSelectedPaziente] = useState<Paziente | null>(null);
@@ -52,7 +54,7 @@ export default function Pazienti() {
   // Debounce per search query
   const debouncedSearch = useDebounce(searchQuery, 500);
 
-  const { data: pazienti = [], isLoading } = useQuery<Paziente[]>({
+  const { data: pazientiData = [], isLoading } = useQuery<Paziente[]>({
     queryKey: ["/api/pazienti", ambulatorioId, debouncedSearch, filters],
     queryFn: () => {
       const params = new URLSearchParams({ ambulatorioId });
@@ -67,6 +69,40 @@ export default function Pazienti() {
     },
     enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
   });
+
+  // Sorting pazienti lato client
+  const pazienti = useMemo(() => {
+    if (!pazientiData) return [];
+    
+    const sorted = [...pazientiData].sort((a, b) => {
+      let aVal: any, bVal: any;
+      
+      switch (sortBy) {
+        case 'cognome':
+          aVal = `${a.cognome} ${a.nome}`.toLowerCase();
+          bVal = `${b.cognome} ${b.nome}`.toLowerCase();
+          break;
+        case 'dataNascita':
+          aVal = new Date(a.dataNascita).getTime();
+          bVal = new Date(b.dataNascita).getTime();
+          break;
+        case 'citta':
+          aVal = a.citta.toLowerCase();
+          bVal = b.citta.toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+    
+    return sorted;
+  }, [pazientiData, sortBy, sortOrder]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -238,15 +274,11 @@ export default function Pazienti() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sesso">Sesso *</Label>
-                  <Select name="sesso" required>
-                    <SelectTrigger data-testid="select-sesso">
-                      <SelectValue placeholder="Seleziona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Maschio</SelectItem>
-                      <SelectItem value="F">Femmina</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select name="sesso" required className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" data-testid="select-sesso">
+                    <option value="">Seleziona...</option>
+                    <option value="M">Maschio</option>
+                    <option value="F">Femmina</option>
+                  </select>
                 </div>
               </div>
 
@@ -354,15 +386,10 @@ export default function Pazienti() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-sesso">Sesso *</Label>
-                  <Select name="sesso" required defaultValue={selectedPaziente.sesso}>
-                    <SelectTrigger data-testid="select-edit-sesso">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="M">Maschio</SelectItem>
-                      <SelectItem value="F">Femmina</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select name="sesso" required defaultValue={selectedPaziente.sesso} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" data-testid="select-edit-sesso">
+                    <option value="M">Maschio</option>
+                    <option value="F">Femmina</option>
+                  </select>
                 </div>
               </div>
 
@@ -522,6 +549,72 @@ export default function Pazienti() {
             </CollapsibleContent>
           </Collapsible>
         </div>
+
+        {/* Barra ordinamento */}
+        {pazienti.length > 0 && (
+          <div className="flex items-center gap-2 pb-4 border-b">
+            <span className="text-sm text-muted-foreground">Ordina per:</span>
+            <div className="flex gap-1">
+              <Button
+                variant={sortBy === 'cognome' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  if (sortBy === 'cognome') {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortBy('cognome');
+                    setSortOrder('asc');
+                  }
+                }}
+                className="gap-1"
+                data-testid="button-sort-cognome"
+              >
+                Nome
+                {sortBy === 'cognome' && (
+                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                )}
+              </Button>
+              <Button
+                variant={sortBy === 'dataNascita' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  if (sortBy === 'dataNascita') {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortBy('dataNascita');
+                    setSortOrder('asc');
+                  }
+                }}
+                className="gap-1"
+                data-testid="button-sort-data"
+              >
+                Data Nascita
+                {sortBy === 'dataNascita' && (
+                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                )}
+              </Button>
+              <Button
+                variant={sortBy === 'citta' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  if (sortBy === 'citta') {
+                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortBy('citta');
+                    setSortOrder('asc');
+                  }
+                }}
+                className="gap-1"
+                data-testid="button-sort-citta"
+              >
+                Città
+                {sortBy === 'citta' && (
+                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="text-center py-12">
