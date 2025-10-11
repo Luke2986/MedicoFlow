@@ -4,6 +4,7 @@ import {
   users, 
   pazienti, 
   appuntamenti,
+  visite,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -12,6 +13,8 @@ import {
   type InsertPaziente,
   type Appuntamento,
   type InsertAppuntamento,
+  type Visita,
+  type InsertVisita,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
@@ -50,6 +53,14 @@ export interface IStorage {
   createAppuntamento(appuntamento: InsertAppuntamento): Promise<Appuntamento>;
   updateAppuntamento(id: string, appuntamento: Partial<InsertAppuntamento>): Promise<Appuntamento>;
   deleteAppuntamento(id: string): Promise<void>;
+  
+  getVisite(ambulatorioId: string): Promise<Visita[]>;
+  getVisita(id: string): Promise<Visita | undefined>;
+  getVisiteByPaziente(pazienteId: string): Promise<Visita[]>;
+  getVisiteByMedico(medicoId: string): Promise<Visita[]>;
+  createVisita(visita: InsertVisita): Promise<Visita>;
+  updateVisita(id: string, visita: Partial<InsertVisita>): Promise<Visita>;
+  deleteVisita(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -280,6 +291,56 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAppuntamento(id: string): Promise<void> {
     await db.delete(appuntamenti).where(eq(appuntamenti.id, id));
+  }
+
+  async getVisite(ambulatorioId: string): Promise<Visita[]> {
+    return await db
+      .select()
+      .from(visite)
+      .where(eq(visite.ambulatorioId, ambulatorioId))
+      .orderBy(desc(visite.dataVisita));
+  }
+
+  async getVisita(id: string): Promise<Visita | undefined> {
+    const [visita] = await db.select().from(visite).where(eq(visite.id, id));
+    return visita || undefined;
+  }
+
+  async getVisiteByPaziente(pazienteId: string): Promise<Visita[]> {
+    return await db
+      .select()
+      .from(visite)
+      .where(eq(visite.pazienteId, pazienteId))
+      .orderBy(desc(visite.dataVisita));
+  }
+
+  async getVisiteByMedico(medicoId: string): Promise<Visita[]> {
+    return await db
+      .select()
+      .from(visite)
+      .where(eq(visite.medicoId, medicoId))
+      .orderBy(desc(visite.dataVisita));
+  }
+
+  async createVisita(insertVisita: InsertVisita): Promise<Visita> {
+    const [visita] = await db
+      .insert(visite)
+      .values(insertVisita)
+      .returning();
+    return visita;
+  }
+
+  async updateVisita(id: string, updateData: Partial<InsertVisita>): Promise<Visita> {
+    const [visita] = await db
+      .update(visite)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(visite.id, id))
+      .returning();
+    return visita;
+  }
+
+  async deleteVisita(id: string): Promise<void> {
+    await db.delete(visite).where(eq(visite.id, id));
   }
 }
 

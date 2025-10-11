@@ -9,6 +9,8 @@ import {
   updatePazienteSchema,
   insertAppuntamentoSchema,
   updateAppuntamentoSchema,
+  insertVisitaSchema,
+  updateVisitaSchema,
 } from "@shared/schema";
 
 const statsQuerySchema = z.object({
@@ -258,6 +260,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/appuntamenti/:id", async (req, res) => {
     try {
       await storage.deleteAppuntamento(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Errore durante l'eliminazione" });
+    }
+  });
+
+  app.get("/api/visite", async (req, res) => {
+    try {
+      const { ambulatorioId, pazienteId, medicoId } = req.query;
+      
+      if (!ambulatorioId || typeof ambulatorioId !== 'string') {
+        return res.status(400).json({ error: "ambulatorioId richiesto" });
+      }
+
+      let visite;
+      
+      if (pazienteId && typeof pazienteId === 'string') {
+        visite = await storage.getVisiteByPaziente(pazienteId);
+      } else if (medicoId && typeof medicoId === 'string') {
+        visite = await storage.getVisiteByMedico(medicoId);
+      } else {
+        visite = await storage.getVisite(ambulatorioId);
+      }
+      
+      res.json(visite);
+    } catch (error) {
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  app.get("/api/visite/:id", async (req, res) => {
+    try {
+      const visita = await storage.getVisita(req.params.id);
+      if (!visita) {
+        return res.status(404).json({ error: "Visita non trovata" });
+      }
+      res.json(visita);
+    } catch (error) {
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  app.post("/api/visite", async (req, res) => {
+    try {
+      const data = insertVisitaSchema.parse(req.body);
+      
+      if (!data.medicoId && data.ambulatorioId) {
+        const medici = await storage.getUsersByAmbulatorio(data.ambulatorioId);
+        if (medici.length > 0) {
+          data.medicoId = medici[0].id;
+        } else {
+          return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
+        }
+      }
+      
+      const visita = await storage.createVisita(data);
+      res.status(201).json(visita);
+    } catch (error) {
+      console.error("Errore creazione visita:", error);
+      res.status(400).json({ error: "Dati non validi" });
+    }
+  });
+
+  app.patch("/api/visite/:id", async (req, res) => {
+    try {
+      const data = updateVisitaSchema.parse(req.body);
+      const visita = await storage.updateVisita(req.params.id, data);
+      res.json(visita);
+    } catch (error: any) {
+      console.error("Errore update visita:", error);
+      res.status(400).json({ error: "Errore durante l'aggiornamento" });
+    }
+  });
+
+  app.delete("/api/visite/:id", async (req, res) => {
+    try {
+      await storage.deleteVisita(req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Errore durante l'eliminazione" });
