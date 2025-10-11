@@ -83,6 +83,17 @@ Modelli principali:
   - Sorting pazienti: cognome/data/città, toggle asc/desc, stable comparator
   - Form fix: Select HTML nativi per FormData compatibility
   - Error messages italiano dettagliati
+- **Fuzzy Search Intelligente** (gennaio 2025):
+  - Ricerca con tolleranza typo tramite Fuse.js (threshold 0.3)
+  - Autocomplete dropdown real-time (trigger dopo 2 caratteri)
+  - Highlight match automatico in giallo (bg-yellow-200)
+  - Keyboard navigation: Arrow keys, Enter, Escape
+  - Click outside to close dropdown
+  - Search su: nome, cognome, CF, telefono, città
+  - Limit 8 risultati con relevance score (0-100%)
+  - Card gradient blue con suggerimenti utente
+  - Hook useFuzzySearch riutilizzabile
+  - Utility highlightMatch con dark mode support
 - Gestione appuntamenti: CRUD completo (Create, Read, Update, Delete)
 - **Calendario Appuntamenti Integrato** (gennaio 2025):
   - Toggle vista Lista/Calendario seamless
@@ -127,6 +138,12 @@ Modelli principali:
   - Toggle asc/desc con indicatori visuali (↑↓)
   - Stable sorting con comparator ottimizzato
   - UI moderna con bottoni state-aware
+- **Fuzzy Search Intelligente** (gennaio 2025):
+  - Autocomplete con tolleranza typo (Fuse.js)
+  - Dropdown real-time con highlight match
+  - Keyboard navigation completa
+  - Relevance score e click-to-navigate
+  - Design card gradient blue medicale
 - Ricerca fulltext (nome, cognome, codice fiscale)
 - Eliminazione con conferma
 - Form compatibilità FormData (HTML select nativi)
