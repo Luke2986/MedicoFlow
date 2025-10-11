@@ -11,7 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Activity, LayoutDashboard, Users, Calendar, FileText, Settings } from "lucide-react";
+import { Activity, LayoutDashboard, Users, Calendar, FileText, Settings, CreditCard } from "lucide-react";
 
 const menuItems = [
   {
@@ -33,6 +33,11 @@ const menuItems = [
     title: "Cartella Clinica",
     url: "/dashboard/cartella-clinica",
     icon: FileText,
+  },
+  {
+    title: "Abbonamento",
+    url: "/dashboard/impostazioni/billing",
+    icon: CreditCard,
   },
   {
     title: "Impostazioni",

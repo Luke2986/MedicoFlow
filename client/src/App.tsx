@@ -13,6 +13,7 @@ import Pazienti from "@/pages/dashboard/pazienti";
 import Appuntamenti from "@/pages/dashboard/appuntamenti";
 import CartellaClinica from "@/pages/dashboard/cartella-clinica";
 import Impostazioni from "@/pages/dashboard/impostazioni";
+import Billing from "@/pages/dashboard/billing";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -67,6 +68,11 @@ function Router() {
       <Route path="/dashboard/impostazioni">
         <DashboardLayout>
           <Impostazioni />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/billing">
+        <DashboardLayout>
+          <Billing />
         </DashboardLayout>
       </Route>
       <Route component={NotFound} />
