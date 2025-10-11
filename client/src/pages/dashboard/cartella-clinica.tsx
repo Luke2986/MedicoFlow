@@ -146,6 +146,7 @@ export default function CartellaClinica() {
       dataVisita: new Date(formData.get("dataVisita") as string).toISOString(),
       motivoVisita: formData.get("motivoVisita") as string,
       anamnesi: formData.get("anamnesi") as string || null,
+      esameObiettivo: formData.get("esameObiettivo") as string || null,
       esamiEseguiti: formData.get("esamiEseguiti") as string || null,
       diagnosi: formData.get("diagnosi") as string,
       terapia: formData.get("terapia") as string || null,
@@ -173,6 +174,7 @@ export default function CartellaClinica() {
       dataVisita: new Date(formData.get("dataVisita") as string).toISOString(),
       motivoVisita: formData.get("motivoVisita") as string,
       anamnesi: formData.get("anamnesi") as string || null,
+      esameObiettivo: formData.get("esameObiettivo") as string || null,
       esamiEseguiti: formData.get("esamiEseguiti") as string || null,
       diagnosi: formData.get("diagnosi") as string,
       terapia: formData.get("terapia") as string || null,
@@ -351,9 +353,18 @@ export default function CartellaClinica() {
                         </div>
                       )}
 
+                      {visita.esameObiettivo && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-1">Esame Obiettivo</h4>
+                          <p className="text-sm text-muted-foreground" data-testid={`text-esame-obiettivo-${visita.id}`}>
+                            {visita.esameObiettivo}
+                          </p>
+                        </div>
+                      )}
+
                       {visita.esamiEseguiti && (
                         <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Esami Eseguiti</h4>
+                          <h4 className="text-sm font-semibold text-foreground mb-1">Esami Strumentali / Laboratorio</h4>
                           <p className="text-sm text-muted-foreground" data-testid={`text-esami-${visita.id}`}>
                             {visita.esamiEseguiti}
                           </p>
@@ -481,11 +492,22 @@ export default function CartellaClinica() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="esamiEseguiti">Esami Eseguiti</Label>
+                <Label htmlFor="esameObiettivo">Esame Obiettivo</Label>
+                <Textarea
+                  id="esameObiettivo"
+                  name="esameObiettivo"
+                  placeholder="Parametri vitali, osservazioni fisiche, esame clinico..."
+                  rows={3}
+                  data-testid="input-esame-obiettivo"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="esamiEseguiti">Esami Strumentali / Laboratorio</Label>
                 <Textarea
                   id="esamiEseguiti"
                   name="esamiEseguiti"
-                  placeholder="Esami obiettivi e strumentali..."
+                  placeholder="Esami strumentali e di laboratorio eseguiti..."
                   rows={2}
                   data-testid="input-esami"
                 />
@@ -663,7 +685,18 @@ export default function CartellaClinica() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-esamiEseguiti">Esami Eseguiti</Label>
+                  <Label htmlFor="edit-esameObiettivo">Esame Obiettivo</Label>
+                  <Textarea
+                    id="edit-esameObiettivo"
+                    name="esameObiettivo"
+                    defaultValue={selectedVisita.esameObiettivo || ""}
+                    rows={3}
+                    data-testid="input-edit-esame-obiettivo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-esamiEseguiti">Esami Strumentali / Laboratorio</Label>
                   <Textarea
                     id="edit-esamiEseguiti"
                     name="esamiEseguiti"

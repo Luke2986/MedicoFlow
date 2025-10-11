@@ -84,6 +84,7 @@ export const visite = pgTable("visite", {
   dataVisita: timestamp("data_visita").notNull(),
   motivoVisita: text("motivo_visita").notNull(),
   anamnesi: text("anamnesi"),
+  esameObiettivo: text("esame_obiettivo"),
   esamiEseguiti: text("esami_eseguiti"),
   diagnosi: text("diagnosi").notNull(),
   terapia: text("terapia"),
