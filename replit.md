@@ -95,14 +95,17 @@ Modelli principali:
   - Hook useFuzzySearch riutilizzabile
   - Utility highlightMatch con dark mode support
 - Gestione appuntamenti: CRUD completo (Create, Read, Update, Delete)
-- **Calendario Appuntamenti Integrato** (gennaio 2025):
-  - Toggle vista Lista/Calendario seamless
-  - Vista calendario mensile con griglia 7 giorni
-  - Navigazione mesi (prev/next) e bottone "Oggi"
-  - Creazione appuntamento da calendario (data pre-selezionata)
-  - Edit appuntamento diretto da click su calendario
-  - Aggregazione appuntamenti per giorno
-  - Badge stato colorati per ogni appuntamento
+- **Calendario Settimanale Interattivo** (ottobre 2025):
+  - Vista settimanale 7 giorni (Lun-Dom) con griglia oraria 8:00-20:00 (slot 30min)
+  - **Click-to-create**: click su slot vuoto apre modal con data/ora pre-compilati
+  - **Click-to-edit**: click su appuntamento esistente apre modal modifica con delete
+  - **Conflict detection**: backend previene sovrapposizioni, ritorna 409 error
+  - **Navigazione settimane**: prev/next/oggi con aggiornamento dinamico week range
+  - **Color coding by status**: confermato=blue, completato=green, cancellato=gray, no-show=red
+  - **AppointmentModal unificato**: singolo componente per create/edit flows
+  - **Backend join pazienti**: innerJoin popola relazione paziente in query appuntamenti
+  - **WeekCalendar controllato**: componente riceve currentDate come prop per sync parent
+  - Toggle vista Lista/Settimana seamless con empty states
 - **Integrazione Pazienti → Cartella Clinica** (gennaio 2025):
   - Link "Visualizza Cartella" con icona FileText in card pazienti
   - URL params per paziente pre-selezionato (?pazienteId=X)
@@ -148,11 +151,20 @@ Modelli principali:
 - Eliminazione con conferma
 - Form compatibilità FormData (HTML select nativi)
 
-### Gestione Appuntamenti  
-- Creazione con selezione paziente
-- Assegnazione automatica medico
-- Validazione date e orari
-- Eliminazione con conferma
+### Gestione Appuntamenti
+- **Calendario Settimanale Interattivo** (ottobre 2025):
+  - Vista griglia 7 giorni × slots orari 8:00-20:00 (30 minuti)
+  - Click slot vuoto → modal create con data/ora pre-popolati
+  - Click appuntamento → modal edit con possibilità delete
+  - Conflict detection server-side (sovrapposti → 409 error)
+  - Navigazione settimane (prev/next/oggi) con query backend dinamiche
+  - Color coding: confermato=blu, completato=verde, cancellato=grigio, no-show=rosso
+  - Legenda colori e suggerimenti UX
+- Creazione con selezione paziente e assegnazione automatica medico
+- Validazione completa date, orari, durata
+- Stati appuntamento: confermato, completato, cancellato, no-show
+- Toggle vista Lista/Settimana con empty states
+- Backend innerJoin pazienti per performance (evita N+1 queries)
 
 ## Sistema Pricing Tiers & Feature Flags
 **Implementazione completa gennaio 2025** - Sistema di abbonamento con paywall e upselling feature premium
