@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2 } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -41,12 +42,22 @@ import type { Visita, Paziente } from "@shared/schema";
 
 export default function CartellaClinica() {
   const { ambulatorioId } = useAmbulatorio();
+  const [location] = useLocation();
   const [selectedPaziente, setSelectedPaziente] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVisita, setSelectedVisita] = useState<Visita | null>(null);
   const { toast } = useToast();
+
+  // Leggi pazienteId da URL params e seleziona automaticamente
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pazienteIdFromUrl = urlParams.get('pazienteId');
+    if (pazienteIdFromUrl) {
+      setSelectedPaziente(pazienteIdFromUrl);
+    }
+  }, [location]);
 
   const { data: pazienti = [] } = useQuery<Paziente[]>({
     queryKey: ["/api/pazienti", ambulatorioId],
@@ -182,6 +193,20 @@ export default function CartellaClinica() {
 
   return (
     <div className="space-y-6">
+      {selectedPaziente && pazienteSelezionato && (
+        <nav className="flex items-center space-x-2 text-sm text-muted-foreground" data-testid="breadcrumb-nav">
+          <Link href="/dashboard" className="hover:text-foreground">Dashboard</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/dashboard/pazienti" className="hover:text-foreground">Pazienti</Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-foreground font-medium">
+            {pazienteSelezionato.cognome} {pazienteSelezionato.nome}
+          </span>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-foreground">Cartella Clinica</span>
+        </nav>
+      )}
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-cartella-title">

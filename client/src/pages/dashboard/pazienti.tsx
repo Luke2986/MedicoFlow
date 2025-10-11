@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Search, Pencil, Trash2, Filter, X } from "lucide-react";
+import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText } from "lucide-react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -566,6 +567,15 @@ export default function Pazienti() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Link href={`/dashboard/cartella-clinica?pazienteId=${paziente.id}`}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      data-testid={`button-cartella-${paziente.id}`}
+                    >
+                      <FileText className="w-4 h-4" />
+                    </Button>
+                  </Link>
                   <Button 
                     variant="ghost" 
                     size="icon" 
