@@ -1,9 +1,12 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, index, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { validateCodiceFiscale } from "./validators";
+
+export const pianoEnum = pgEnum("piano", ["BASE", "PROFESSIONAL", "ENTERPRISE"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["ACTIVE", "CANCELLED", "EXPIRED", "TRIAL"]);
 
 export const ambulatori = pgTable("ambulatori", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -102,11 +105,28 @@ export const visite = pgTable("visite", {
   medicoVisitaIdx: index("medico_visita_idx").on(table.medicoId),
 }));
 
-export const ambulatoriRelations = relations(ambulatori, ({ many }) => ({
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().unique().references(() => ambulatori.id),
+  piano: pianoEnum("piano").notNull().default("BASE"),
+  status: subscriptionStatusEnum("status").notNull().default("ACTIVE"),
+  prezzoMensile: integer("prezzo_mensile").notNull(),
+  features: text("features").array().notNull().default(sql`ARRAY[]::text[]`),
+  dataInizio: timestamp("data_inizio").defaultNow().notNull(),
+  dataFine: timestamp("data_fine"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const ambulatoriRelations = relations(ambulatori, ({ many, one }) => ({
   users: many(users),
   pazienti: many(pazienti),
   appuntamenti: many(appuntamenti),
   visite: many(visite),
+  subscription: one(subscriptions, {
+    fields: [ambulatori.id],
+    references: [subscriptions.ambulatorioId],
+  }),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -161,6 +181,13 @@ export const visiteRelations = relations(visite, ({ one }) => ({
   }),
   ambulatorio: one(ambulatori, {
     fields: [visite.ambulatorioId],
+    references: [ambulatori.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  ambulatorio: one(ambulatori, {
+    fields: [subscriptions.ambulatorioId],
     references: [ambulatori.id],
   }),
 }));
@@ -237,3 +264,14 @@ export type InsertAppuntamento = z.infer<typeof insertAppuntamentoSchema>;
 
 export type Visita = typeof visite.$inferSelect;
 export type InsertVisita = z.infer<typeof insertVisitaSchema>;
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSubscriptionSchema = insertSubscriptionSchema.partial();
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;

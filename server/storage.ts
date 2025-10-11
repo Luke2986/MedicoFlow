@@ -5,6 +5,7 @@ import {
   pazienti, 
   appuntamenti,
   visite,
+  subscriptions,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -15,6 +16,8 @@ import {
   type InsertAppuntamento,
   type Visita,
   type InsertVisita,
+  type Subscription,
+  type InsertSubscription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
@@ -61,6 +64,10 @@ export interface IStorage {
   createVisita(visita: InsertVisita): Promise<Visita>;
   updateVisita(id: string, visita: Partial<InsertVisita>): Promise<Visita>;
   deleteVisita(id: string): Promise<void>;
+  
+  getSubscription(ambulatorioId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(ambulatorioId: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -341,6 +348,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVisita(id: string): Promise<void> {
     await db.delete(visite).where(eq(visite.id, id));
+  }
+
+  async getSubscription(ambulatorioId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.ambulatorioId, ambulatorioId));
+    return subscription || undefined;
+  }
+
+  async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {
+    const [subscription] = await db
+      .insert(subscriptions)
+      .values(insertSubscription)
+      .returning();
+    return subscription;
+  }
+
+  async updateSubscription(ambulatorioId: string, updateData: Partial<InsertSubscription>): Promise<Subscription> {
+    const [subscription] = await db
+      .update(subscriptions)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(subscriptions.ambulatorioId, ambulatorioId))
+      .returning();
+    return subscription;
   }
 }
 
