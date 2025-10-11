@@ -172,93 +172,93 @@ export default function Appuntamenti() {
               Nuovo Appuntamento
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Crea Nuovo Appuntamento</DialogTitle>
-              <DialogDescription>
-                Pianifica un appuntamento per un paziente
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pazienteId">Paziente *</Label>
-                <Select name="pazienteId" required>
-                  <SelectTrigger data-testid="select-patient">
-                    <SelectValue placeholder="Seleziona paziente..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pazienti.map((paz) => (
-                      <SelectItem key={paz.id} value={paz.id}>
-                        {paz.cognome} {paz.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Crea Nuovo Appuntamento</DialogTitle>
+                <DialogDescription>
+                  Pianifica un appuntamento per un paziente
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="data">Data *</Label>
-                  <Input id="data" name="data" type="date" required data-testid="input-date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ora">Ora *</Label>
-                  <Input id="ora" name="ora" type="time" required data-testid="input-time" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo Visita *</Label>
-                  <Select name="tipo" required>
-                    <SelectTrigger data-testid="select-type">
-                      <SelectValue placeholder="Seleziona..." />
+                  <Label htmlFor="pazienteId">Paziente *</Label>
+                  <Select name="pazienteId" required>
+                    <SelectTrigger data-testid="select-patient">
+                      <SelectValue placeholder="Seleziona paziente..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Prima visita">Prima visita</SelectItem>
-                      <SelectItem value="Controllo">Controllo</SelectItem>
-                      <SelectItem value="Urgente">Urgente</SelectItem>
-                      <SelectItem value="Esame">Esame</SelectItem>
+                      {pazienti.map((paz) => (
+                        <SelectItem key={paz.id} value={paz.id}>
+                          {paz.cognome} {paz.nome}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="durata">Durata (min) *</Label>
-                  <Select name="durata" defaultValue="30">
-                    <SelectTrigger data-testid="select-duration">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15">15 minuti</SelectItem>
-                      <SelectItem value="30">30 minuti</SelectItem>
-                      <SelectItem value="45">45 minuti</SelectItem>
-                      <SelectItem value="60">60 minuti</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="data">Data *</Label>
+                    <Input id="data" name="data" type="date" required data-testid="input-date" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ora">Ora *</Label>
+                    <Input id="ora" name="ora" type="time" required data-testid="input-time" />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="motivoVisita">Motivo della Visita</Label>
-                <Input id="motivoVisita" name="motivoVisita" data-testid="input-reason" />
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tipo">Tipo Visita *</Label>
+                    <Select name="tipo" required>
+                      <SelectTrigger data-testid="select-type">
+                        <SelectValue placeholder="Seleziona..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Prima visita">Prima visita</SelectItem>
+                        <SelectItem value="Controllo">Controllo</SelectItem>
+                        <SelectItem value="Urgente">Urgente</SelectItem>
+                        <SelectItem value="Esame">Esame</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="durata">Durata (min) *</Label>
+                    <Select name="durata" defaultValue="30">
+                      <SelectTrigger data-testid="select-duration">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 minuti</SelectItem>
+                        <SelectItem value="30">30 minuti</SelectItem>
+                        <SelectItem value="45">45 minuti</SelectItem>
+                        <SelectItem value="60">60 minuti</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="note">Note</Label>
-                <Input id="note" name="note" data-testid="input-notes" />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="motivoVisita">Motivo della Visita</Label>
+                  <Input id="motivoVisita" name="motivoVisita" data-testid="input-reason" />
+                </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel">
-                  Annulla
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-appointment">
-                  {createMutation.isPending ? "Creazione..." : "Crea"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="note">Note</Label>
+                  <Input id="note" name="note" data-testid="input-notes" />
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel">
+                    Annulla
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-appointment">
+                    {createMutation.isPending ? "Creazione..." : "Crea"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
       </div>
 
       {/* Edit Dialog */}

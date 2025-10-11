@@ -69,9 +69,10 @@ Modelli principali:
 - Homepage con hero section professionale
 - Dashboard layout con sidebar navigazione
 - Dashboard con statistiche reali (pazienti, appuntamenti oggi/settimana, tasso attività)
-- Gestione pazienti: Create, Read, Delete con ricerca fulltext
-- Gestione appuntamenti: Create, Read, Delete
-- Backend API completo con validazione Zod
+- Gestione pazienti: CRUD completo (Create, Read, Update, Delete) con ricerca fulltext
+- Gestione appuntamenti: CRUD completo (Create, Read, Update, Delete)
+- Backend API completo con validazione Zod (POST, GET, PATCH, DELETE)
+- Update schemas con .partial() per aggiornamenti parziali
 - Database seeding automatico con ambulatorio di default
 - Assegnazione automatica medico agli appuntamenti
 - Integrazione frontend-backend con TanStack Query
@@ -98,10 +99,10 @@ Modelli principali:
 - Eliminazione con conferma
 
 ## Prossimi Sviluppi
-1. Funzionalità Update/Edit per pazienti e appuntamenti
+1. Vista calendario appuntamenti (mensile con navigazione)
 2. Sistema cartelle cliniche completo
 3. Gestione anamnesi paziente
-4. Report e statistiche avanzate
+4. Report e statistiche avanzate con grafici
 5. Gestione multi-ambulatorio
 6. Sistema di autenticazione utenti
 
