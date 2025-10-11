@@ -232,11 +232,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAppuntamenti(ambulatorioId: string): Promise<Appuntamento[]> {
-    return await db
+    const results = await db
       .select()
       .from(appuntamenti)
+      .innerJoin(pazienti, eq(appuntamenti.pazienteId, pazienti.id))
       .where(eq(appuntamenti.ambulatorioId, ambulatorioId))
       .orderBy(desc(appuntamenti.dataOra));
+    
+    return results.map(r => ({ ...r.appuntamenti, paziente: r.pazienti }));
   }
 
   async getAppuntamento(id: string): Promise<Appuntamento | undefined> {
@@ -245,19 +248,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAppuntamentiByPaziente(pazienteId: string): Promise<Appuntamento[]> {
-    return await db
+    const results = await db
       .select()
       .from(appuntamenti)
+      .innerJoin(pazienti, eq(appuntamenti.pazienteId, pazienti.id))
       .where(eq(appuntamenti.pazienteId, pazienteId))
       .orderBy(desc(appuntamenti.dataOra));
+    
+    return results.map(r => ({ ...r.appuntamenti, paziente: r.pazienti }));
   }
 
   async getAppuntamentiByMedico(medicoId: string): Promise<Appuntamento[]> {
-    return await db
+    const results = await db
       .select()
       .from(appuntamenti)
+      .innerJoin(pazienti, eq(appuntamenti.pazienteId, pazienti.id))
       .where(eq(appuntamenti.medicoId, medicoId))
       .orderBy(desc(appuntamenti.dataOra));
+    
+    return results.map(r => ({ ...r.appuntamenti, paziente: r.pazienti }));
   }
 
   async getAppuntamentiByDate(ambulatorioId: string, date: Date): Promise<Appuntamento[]> {
@@ -267,9 +276,10 @@ export class DatabaseStorage implements IStorage {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return await db
+    const results = await db
       .select()
       .from(appuntamenti)
+      .innerJoin(pazienti, eq(appuntamenti.pazienteId, pazienti.id))
       .where(
         and(
           eq(appuntamenti.ambulatorioId, ambulatorioId),
@@ -278,12 +288,15 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(appuntamenti.dataOra);
+    
+    return results.map(r => ({ ...r.appuntamenti, paziente: r.pazienti }));
   }
 
   async getAppuntamentiByWeek(ambulatorioId: string, weekStart: Date, weekEnd: Date): Promise<Appuntamento[]> {
-    return await db
+    const results = await db
       .select()
       .from(appuntamenti)
+      .innerJoin(pazienti, eq(appuntamenti.pazienteId, pazienti.id))
       .where(
         and(
           eq(appuntamenti.ambulatorioId, ambulatorioId),
@@ -292,6 +305,8 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(appuntamenti.dataOra);
+    
+    return results.map(r => ({ ...r.appuntamenti, paziente: r.pazienti }));
   }
 
   async createAppuntamento(insertAppuntamento: InsertAppuntamento): Promise<Appuntamento> {

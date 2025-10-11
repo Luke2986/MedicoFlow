@@ -191,6 +191,7 @@ export default function Appuntamenti() {
           <>
             <WeekCalendar
               appuntamenti={appuntamenti}
+              currentDate={currentWeekDate}
               onAppuntamentoClick={handleAppuntamentoClick}
               onSlotClick={handleSlotClick}
               onWeekChange={handleWeekChange}

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addWeeks, subWeeks, isSameDay, isToday } from 'date-fns'
 import { it } from 'date-fns/locale'
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button'
 
 interface WeekCalendarProps {
   appuntamenti: any[]
+  currentDate: Date
   onAppuntamentoClick: (appuntamento: any) => void
   onSlotClick: (date: Date, hour: number, minutes: number) => void
   onWeekChange: (date: Date) => void
@@ -14,29 +14,26 @@ interface WeekCalendarProps {
 
 export default function WeekCalendar({
   appuntamenti,
+  currentDate,
   onAppuntamentoClick,
   onSlotClick,
   onWeekChange
 }: WeekCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
   const weekDays = getWeekDays(currentDate)
   const timeSlots = getTimeSlots(8, 20, 30)
 
   const handlePrevWeek = () => {
     const newDate = subWeeks(currentDate, 1)
-    setCurrentDate(newDate)
     onWeekChange(newDate)
   }
 
   const handleNextWeek = () => {
     const newDate = addWeeks(currentDate, 1)
-    setCurrentDate(newDate)
     onWeekChange(newDate)
   }
 
   const handleToday = () => {
     const today = new Date()
-    setCurrentDate(today)
     onWeekChange(today)
   }
 
