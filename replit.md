@@ -65,25 +65,45 @@ Modelli principali:
 
 ## Stato Attuale MVP
 ✅ **Completati**:
-- Setup completo schema database con relazioni
+- Setup completo schema database con relazioni PostgreSQL
 - Homepage con hero section professionale
 - Dashboard layout con sidebar navigazione
-- Pagine placeholder per tutte le sezioni principali
-- Sistema di routing completo
+- Dashboard con statistiche reali (pazienti, appuntamenti oggi/settimana, tasso attività)
+- Gestione pazienti: Create, Read, Delete con ricerca fulltext
+- Gestione appuntamenti: Create, Read, Delete
+- Backend API completo con validazione Zod
+- Database seeding automatico con ambulatorio di default
+- Assegnazione automatica medico agli appuntamenti
+- Integrazione frontend-backend con TanStack Query
 - Dark/light mode
 - Design system medicale completo
 
-🚧 **In sviluppo**:
-- Backend API endpoints
-- Integrazione database
-- CRUD pazienti e appuntamenti
+## Funzionalità Chiave
+### Dashboard
+- Card statistiche in tempo reale
+- Pazienti totali, appuntamenti oggi/settimana
+- Tasso di attività calcolato dinamicamente
+- Lista prossimi appuntamenti
+
+### Gestione Pazienti
+- Creazione con validazione completa
+- Ricerca fulltext (nome, cognome, codice fiscale)
+- Eliminazione con conferma
+- Validazione codice fiscale univoco
+
+### Gestione Appuntamenti  
+- Creazione con selezione paziente
+- Assegnazione automatica medico
+- Validazione date e orari
+- Eliminazione con conferma
 
 ## Prossimi Sviluppi
-1. Implementazione backend con DatabaseStorage
-2. API endpoints per CRUD operations
-3. Gestione completa pazienti con ricerca
-4. Calendario appuntamenti interattivo
-5. Sistema cartelle cliniche
+1. Funzionalità Update/Edit per pazienti e appuntamenti
+2. Sistema cartelle cliniche completo
+3. Gestione anamnesi paziente
+4. Report e statistiche avanzate
+5. Gestione multi-ambulatorio
+6. Sistema di autenticazione utenti
 
 ## Note Tecniche
 - Font: Inter caricato da Google Fonts
