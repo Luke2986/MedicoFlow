@@ -193,6 +193,31 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   }),
 }));
 
+export const aiUsage = pgTable("ai_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  month: varchar("month", { length: 7 }).notNull(), // formato: "2025-01"
+  voiceNotesUsed: integer("voice_notes_used").notNull().default(0),
+  autoCompleteUsed: integer("auto_complete_used").notNull().default(0),
+  analyticsUsed: integer("analytics_used").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  ambulatorioMonthIdx: index("ambulatorio_month_idx").on(table.ambulatorioId, table.month),
+}));
+
+export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
+  ambulatorio: one(ambulatori, {
+    fields: [aiUsage.ambulatorioId],
+    references: [ambulatori.id],
+  }),
+  user: one(users, {
+    fields: [aiUsage.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertAmbulatorioSchema = createInsertSchema(ambulatori).omit({
   id: true,
   createdAt: true,
@@ -278,3 +303,12 @@ export const updateSubscriptionSchema = insertSubscriptionSchema.partial();
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+export const insertAIUsageSchema = createInsertSchema(aiUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AIUsage = typeof aiUsage.$inferSelect;
+export type InsertAIUsage = z.infer<typeof insertAIUsageSchema>;
