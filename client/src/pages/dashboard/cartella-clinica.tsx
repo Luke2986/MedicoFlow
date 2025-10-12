@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
+import { useUser } from "@/lib/useUser";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import { VoiceRecorder } from "@/components/ai/VoiceRecorder";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +44,7 @@ import type { Visita, Paziente } from "@shared/schema";
 
 export default function CartellaClinica() {
   const { ambulatorioId } = useAmbulatorio();
+  const { userId } = useUser();
   const [location] = useLocation();
   const [selectedPaziente, setSelectedPaziente] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -49,6 +52,12 @@ export default function CartellaClinica() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVisita, setSelectedVisita] = useState<Visita | null>(null);
   const { toast } = useToast();
+  
+  // Refs for form fields to enable AI auto-fill
+  const anamnesRef = useRef<HTMLTextAreaElement>(null);
+  const esameObiettivoRef = useRef<HTMLTextAreaElement>(null);
+  const diagnosiRef = useRef<HTMLTextAreaElement>(null);
+  const terapiaRef = useRef<HTMLTextAreaElement>(null);
 
   // Leggi pazienteId da URL params e seleziona automaticamente
   useEffect(() => {
@@ -136,6 +145,29 @@ export default function CartellaClinica() {
       });
     },
   });
+
+  const handleTranscription = (result: any) => {
+    const { sections } = result;
+    
+    // Auto-fill form fields with transcribed content
+    if (sections.anamnesi && anamnesRef.current) {
+      anamnesRef.current.value = sections.anamnesi;
+    }
+    if (sections.esameObiettivo && esameObiettivoRef.current) {
+      esameObiettivoRef.current.value = sections.esameObiettivo;
+    }
+    if (sections.diagnosi && diagnosiRef.current) {
+      diagnosiRef.current.value = sections.diagnosi;
+    }
+    if (sections.terapia && terapiaRef.current) {
+      terapiaRef.current.value = sections.terapia;
+    }
+
+    toast({
+      title: "✨ Trascrizione completata",
+      description: "I campi sono stati compilati automaticamente",
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -455,6 +487,14 @@ export default function CartellaClinica() {
               Compila i dati della visita medica
             </DialogDescription>
           </DialogHeader>
+          
+          <VoiceRecorder 
+            ambulatorioId={ambulatorioId}
+            userId={userId}
+            onTranscriptionComplete={handleTranscription}
+            disabled={createMutation.isPending}
+          />
+
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -483,6 +523,7 @@ export default function CartellaClinica() {
               <div className="space-y-2">
                 <Label htmlFor="anamnesi">Anamnesi</Label>
                 <Textarea
+                  ref={anamnesRef}
                   id="anamnesi"
                   name="anamnesi"
                   placeholder="Storia clinica e sintomi riferiti..."
@@ -494,6 +535,7 @@ export default function CartellaClinica() {
               <div className="space-y-2">
                 <Label htmlFor="esameObiettivo">Esame Obiettivo</Label>
                 <Textarea
+                  ref={esameObiettivoRef}
                   id="esameObiettivo"
                   name="esameObiettivo"
                   placeholder="Parametri vitali, osservazioni fisiche, esame clinico..."
@@ -516,6 +558,7 @@ export default function CartellaClinica() {
               <div className="space-y-2">
                 <Label htmlFor="diagnosi">Diagnosi *</Label>
                 <Textarea
+                  ref={diagnosiRef}
                   id="diagnosi"
                   name="diagnosi"
                   placeholder="Diagnosi clinica..."
@@ -528,6 +571,7 @@ export default function CartellaClinica() {
               <div className="space-y-2">
                 <Label htmlFor="terapia">Terapia</Label>
                 <Textarea
+                  ref={terapiaRef}
                   id="terapia"
                   name="terapia"
                   placeholder="Terapia consigliata..."

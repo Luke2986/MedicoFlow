@@ -6,10 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const AMBULATORIO_ID = "9f6d275b-f296-495b-b80c-907404f09a15";
-const USER_ID = "4fc2e9ce-3c28-4782-8a13-74f128a5f0ee";
-
 interface VoiceRecorderProps {
+  ambulatorioId: string;
+  userId: string;
   onTranscriptionComplete: (result: any) => void;
   disabled?: boolean;
 }
@@ -23,6 +22,8 @@ interface QuotaInfo {
 }
 
 export function VoiceRecorder({ 
+  ambulatorioId,
+  userId,
   onTranscriptionComplete, 
   disabled 
 }: VoiceRecorderProps) {
@@ -35,12 +36,14 @@ export function VoiceRecorder({
   const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    fetchQuota();
-  }, []);
+    if (ambulatorioId && userId) {
+      fetchQuota();
+    }
+  }, [ambulatorioId, userId]);
 
   const fetchQuota = async () => {
     try {
-      const res = await fetch(`/api/ai/quota?ambulatorioId=${AMBULATORIO_ID}&userId=${USER_ID}`);
+      const res = await fetch(`/api/ai/quota?ambulatorioId=${ambulatorioId}&userId=${userId}`);
       const data = await res.json();
       setQuota(data.voiceNotes);
       setPlan(data.plan);
@@ -92,8 +95,8 @@ export function VoiceRecorder({
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('ambulatorioId', AMBULATORIO_ID);
-      formData.append('userId', USER_ID);
+      formData.append('ambulatorioId', ambulatorioId);
+      formData.append('userId', userId);
 
       const response = await fetch('/api/ai/transcribe', {
         method: 'POST',
@@ -134,8 +137,8 @@ export function VoiceRecorder({
     try {
       const formData = new FormData();
       formData.append('audio', file);
-      formData.append('ambulatorioId', AMBULATORIO_ID);
-      formData.append('userId', USER_ID);
+      formData.append('ambulatorioId', ambulatorioId);
+      formData.append('userId', userId);
 
       const response = await fetch('/api/ai/transcribe', {
         method: 'POST',
