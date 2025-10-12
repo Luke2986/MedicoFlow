@@ -38,7 +38,7 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
     - **Conflict Detection**: Server-side prevention of overlapping appointments.
     - **Color Coding**: Appointments are color-coded by status (confirmed, completed, canceled, no-show).
 - **Digital Medical Record (Cartella Clinica)**: Structured form for medical visits including anamnesis, objective examination, diagnosis, therapy, vital parameters, and chronological visit history.
-- **AI Voice-to-Clinical-Note**: OpenAI-powered audio transcription (Whisper API) with GPT-4 structured field extraction. Auto-fills anamnesi, diagnosi, and terapia from voice recordings. Features quota-based access control with usage tracking per plan (PROFESSIONAL: 150/month, ENTERPRISE: unlimited, BASE: disabled).
+- **AI Voice-to-Clinical-Note**: Groq-powered audio transcription (Whisper Large v3) with Llama 3.3 70B structured field extraction. Auto-fills anamnesi, diagnosi, and terapia from voice recordings. Features quota-based access control with usage tracking per plan (PROFESSIONAL: 150/month, ENTERPRISE: unlimited, BASE: disabled).
 - **Settings Menu**: Comprehensive settings with sections for clinic data, billing, team management, notifications, privacy, and support.
 - **Subscription & Pricing Tiers**: Implemented with `subscriptions` table and feature flags (`hasFeature`) for different access levels (BASE, PROFESSIONAL, ENTERPRISE). Includes paywall implementation for premium features like AI Agent Search and Voice-to-Clinical-Note.
 
@@ -63,5 +63,5 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 - **react-hook-form**: Forms management library for React.
 - **Zod**: TypeScript-first schema declaration and validation library.
 - **Google Fonts**: For 'Inter' typeface.
-- **OpenAI API**: Whisper for audio transcription, GPT-4 for clinical text structuring.
+- **Groq API**: Whisper Large v3 for audio transcription, Llama 3.3 70B for clinical text structuring.
 - **Multer**: Multipart/form-data handling for file uploads.

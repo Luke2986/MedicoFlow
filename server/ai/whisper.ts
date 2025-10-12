@@ -1,9 +1,9 @@
 import OpenAI from "openai";
 
-// This is using OpenAI's API, which points to OpenAI's API servers and requires your own API key.
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
+// Using Groq API (OpenAI-compatible) for faster inference
+const groq = new OpenAI({ 
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1"
 });
 
 export interface TranscriptionResult {
@@ -21,10 +21,10 @@ export async function transcribeAudio(
   audioFile: File
 ): Promise<TranscriptionResult> {
   try {
-    // 1. Trascrivi audio con Whisper
-    const transcription = await openai.audio.transcriptions.create({
+    // 1. Trascrivi audio con Whisper su Groq
+    const transcription = await groq.audio.transcriptions.create({
       file: audioFile,
-      model: 'whisper-1',
+      model: 'whisper-large-v3',
       language: 'it',
       response_format: 'text'
     });
@@ -68,15 +68,16 @@ Rispondi SOLO con JSON in questo formato:
 Se una sezione non è presente nel testo, omettila dal JSON.`;
 
   try {
-    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-5',
+    // Usa Llama 3.3 70B su Groq per estrazione strutturata
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: 'Sei un assistente medico che struttura note cliniche.' },
         { role: 'user', content: prompt }
       ],
       response_format: { type: 'json_object' },
-      max_completion_tokens: 2048
+      max_tokens: 2048,
+      temperature: 0.3
     });
 
     const content = completion.choices[0].message.content;
