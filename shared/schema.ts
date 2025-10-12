@@ -198,6 +198,8 @@ export const insertAmbulatorioSchema = createInsertSchema(ambulatori).omit({
   createdAt: true,
 });
 
+export const updateAmbulatorioSchema = insertAmbulatorioSchema.partial();
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,

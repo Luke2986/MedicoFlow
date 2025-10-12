@@ -14,6 +14,11 @@ import Appuntamenti from "@/pages/dashboard/appuntamenti";
 import CartellaClinica from "@/pages/dashboard/cartella-clinica";
 import Impostazioni from "@/pages/dashboard/impostazioni";
 import Billing from "@/pages/dashboard/billing";
+import ImpostazioniAmbulatorio from "@/pages/dashboard/impostazioni/ambulatorio";
+import ImpostazioniTeam from "@/pages/dashboard/impostazioni/team";
+import ImpostazioniNotifiche from "@/pages/dashboard/impostazioni/notifiche";
+import ImpostazioniPrivacy from "@/pages/dashboard/impostazioni/privacy";
+import ImpostazioniSupporto from "@/pages/dashboard/impostazioni/supporto";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -73,6 +78,31 @@ function Router() {
       <Route path="/dashboard/impostazioni/billing">
         <DashboardLayout>
           <Billing />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/ambulatorio">
+        <DashboardLayout>
+          <ImpostazioniAmbulatorio />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/team">
+        <DashboardLayout>
+          <ImpostazioniTeam />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/notifiche">
+        <DashboardLayout>
+          <ImpostazioniNotifiche />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/privacy">
+        <DashboardLayout>
+          <ImpostazioniPrivacy />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/supporto">
+        <DashboardLayout>
+          <ImpostazioniSupporto />
         </DashboardLayout>
       </Route>
       <Route component={NotFound} />

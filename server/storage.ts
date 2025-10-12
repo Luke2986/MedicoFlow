@@ -26,6 +26,7 @@ export interface IStorage {
   getAllAmbulatori(): Promise<Ambulatorio[]>;
   getAmbulatorio(id: string): Promise<Ambulatorio | undefined>;
   createAmbulatorio(ambulatorio: InsertAmbulatorio): Promise<Ambulatorio>;
+  updateAmbulatorio(id: string, ambulatorio: Partial<InsertAmbulatorio>): Promise<Ambulatorio>;
   
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -87,6 +88,16 @@ export class DatabaseStorage implements IStorage {
       .values(insertAmbulatorio)
       .returning();
     return ambulatorio;
+  }
+
+  async updateAmbulatorio(id: string, ambulatorioData: Partial<InsertAmbulatorio>): Promise<Ambulatorio> {
+    const [updated] = await db
+      .update(ambulatori)
+      .set(ambulatorioData)
+      .where(eq(ambulatori.id, id))
+      .returning();
+    if (!updated) throw new Error("Ambulatorio non trovato");
+    return updated;
   }
 
   async getUser(id: string): Promise<User | undefined> {

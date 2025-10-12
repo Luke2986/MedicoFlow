@@ -5,6 +5,7 @@ import { z } from "zod";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { 
   insertAmbulatorioSchema,
+  updateAmbulatorioSchema,
   insertUserSchema,
   insertPazienteSchema,
   updatePazienteSchema,
@@ -48,6 +49,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ambulatorio = await storage.createAmbulatorio(data);
       res.status(201).json(ambulatorio);
     } catch (error) {
+      res.status(400).json({ error: "Dati non validi" });
+    }
+  });
+
+  app.patch("/api/ambulatori/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = updateAmbulatorioSchema.parse(req.body);
+      const ambulatorio = await storage.updateAmbulatorio(id, data);
+      res.json(ambulatorio);
+    } catch (error: any) {
+      if (error.message === "Ambulatorio non trovato") {
+        return res.status(404).json({ error: "Ambulatorio non trovato" });
+      }
       res.status(400).json({ error: "Dati non validi" });
     }
   });
