@@ -469,6 +469,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Routes
+  const { checkAIQuota, incrementAIUsage } = await import("./ai/usage");
+  const { transcribeAudio } = await import("./ai/whisper");
+  const multer = await import("multer");
+  const upload = multer.default({ storage: multer.memoryStorage() });
+
+  app.post("/api/ai/transcribe", upload.single("audio"), async (req, res) => {
+    try {
+      const { ambulatorioId, userId } = req.body;
+      
+      if (!ambulatorioId || !userId) {
+        return res.status(400).json({ error: "ambulatorioId e userId richiesti" });
+      }
+
+      // Check quota
+      const quota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
+      if (!quota.allowed) {
+        return res.status(429).json({
+          error: 'Limite voice notes raggiunto',
+          quota: {
+            used: quota.used,
+            limit: quota.limit,
+            resetDate: quota.resetDate
+          }
+        });
+      }
+
+      const audioFile = req.file;
+      if (!audioFile) {
+        return res.status(400).json({ error: 'File audio mancante' });
+      }
+
+      // Validate file size (max 25MB)
+      if (audioFile.size > 25 * 1024 * 1024) {
+        return res.status(400).json({ error: 'File troppo grande (max 25MB)' });
+      }
+
+      // Convert buffer to File-like object for OpenAI
+      const file = new File([audioFile.buffer], audioFile.originalname, {
+        type: audioFile.mimetype
+      });
+
+      // Transcribe
+      const result = await transcribeAudio(file);
+
+      // Increment usage
+      await incrementAIUsage(ambulatorioId, userId, 'voiceNotes');
+
+      // Get updated quota
+      const updatedQuota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
+
+      res.json({
+        success: true,
+        result,
+        quota: {
+          used: updatedQuota.used,
+          limit: updatedQuota.limit,
+          resetDate: updatedQuota.resetDate,
+          percentageUsed: updatedQuota.percentageUsed
+        }
+      });
+    } catch (error: any) {
+      console.error('Errore trascrizione:', error);
+      res.status(500).json({ 
+        error: error.message || 'Errore durante la trascrizione' 
+      });
+    }
+  });
+
+  app.get("/api/ai/quota", async (req, res) => {
+    try {
+      const { ambulatorioId, userId } = req.query;
+
+      if (!ambulatorioId || typeof ambulatorioId !== 'string' || 
+          !userId || typeof userId !== 'string') {
+        return res.status(400).json({ error: 'ambulatorioId e userId richiesti' });
+      }
+
+      const subscription = await storage.getSubscription(ambulatorioId);
+      const voiceQuota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
+
+      res.json({
+        plan: subscription?.piano || 'BASE',
+        voiceNotes: voiceQuota
+      });
+    } catch (error) {
+      console.error('Errore quota:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
