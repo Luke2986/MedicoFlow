@@ -58,8 +58,21 @@ export function VoiceRecorder({
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
+      });
+      
+      // Usa il miglior formato audio disponibile per Whisper
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -71,7 +84,12 @@ export function VoiceRecorder({
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+        console.log('Audio registrato:', {
+          size: audioBlob.size,
+          type: audioBlob.type,
+          duration: chunksRef.current.length
+        });
         await processAudio(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -79,6 +97,7 @@ export function VoiceRecorder({
       mediaRecorder.start();
       setIsRecording(true);
       setError('');
+      console.log('Registrazione avviata con:', mimeType);
     } catch (err) {
       setError('Errore accesso microfono. Controlla i permessi.');
       console.error('Errore microfono:', err);
@@ -255,6 +274,13 @@ export function VoiceRecorder({
           />
         </label>
       </div>
+
+      {isRecording && (
+        <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <span className="font-medium">Registrazione in corso - Parla chiaramente vicino al microfono</span>
+        </div>
+      )}
 
       {isProcessing && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
