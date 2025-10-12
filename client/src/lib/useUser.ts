@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAmbulatorio } from "./useAmbulatorio";
 
 interface User {
   id: string;
@@ -9,15 +10,18 @@ interface User {
   ambulatorioId: string;
 }
 
-// Since there's no auth system, get the default medico user
+// Since there's no auth system, get the default medico user for the current ambulatorio
 export function useUser() {
+  const { ambulatorioId } = useAmbulatorio();
+
   const { data: user } = useQuery<User>({
-    queryKey: ["/api/users/email/mario.rossi@ambulatoriorossi.it"],
+    queryKey: ["/api/users/ambulatorio", ambulatorioId, "default"],
     queryFn: async () => {
-      const res = await fetch("/api/users/email/mario.rossi@ambulatoriorossi.it");
+      const res = await fetch(`/api/users/ambulatorio/${ambulatorioId}/default`);
       if (!res.ok) throw new Error("Errore caricamento utente");
       return res.json();
     },
+    enabled: !!ambulatorioId,
   });
 
   return {

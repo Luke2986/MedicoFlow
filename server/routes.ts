@@ -91,6 +91,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/ambulatorio/:ambulatorioId/default", async (req, res) => {
+    try {
+      const users = await storage.getUsersByAmbulatorio(req.params.ambulatorioId);
+      if (!users || users.length === 0) {
+        return res.status(404).json({ error: "Nessun utente trovato per questo ambulatorio" });
+      }
+      const defaultUser = users.find(u => u.ruolo === "medico") || users[0];
+      res.json(defaultUser);
+    } catch (error) {
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
   app.post("/api/users", async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
