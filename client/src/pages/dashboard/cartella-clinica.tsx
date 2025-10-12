@@ -147,20 +147,25 @@ export default function CartellaClinica() {
   });
 
   const handleTranscription = (result: any) => {
+    console.log('Trascrizione ricevuta:', result);
     const { sections } = result;
     
-    // Auto-fill form fields with transcribed content
-    if (sections.anamnesi && anamnesRef.current) {
+    // Auto-fill form fields with transcribed content and trigger input event
+    if (sections?.anamnesi && anamnesRef.current) {
       anamnesRef.current.value = sections.anamnesi;
+      anamnesRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    if (sections.esameObiettivo && esameObiettivoRef.current) {
+    if (sections?.esameObiettivo && esameObiettivoRef.current) {
       esameObiettivoRef.current.value = sections.esameObiettivo;
+      esameObiettivoRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    if (sections.diagnosi && diagnosiRef.current) {
+    if (sections?.diagnosi && diagnosiRef.current) {
       diagnosiRef.current.value = sections.diagnosi;
+      diagnosiRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    if (sections.terapia && terapiaRef.current) {
+    if (sections?.terapia && terapiaRef.current) {
       terapiaRef.current.value = sections.terapia;
+      terapiaRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     toast({
