@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { correctMedicalText } from "./medical-dictionary";
 
 // Using Groq API (OpenAI-compatible) for faster inference
 const groq = new OpenAI({ 
@@ -8,6 +9,8 @@ const groq = new OpenAI({
 
 export interface TranscriptionResult {
   text: string;
+  correctedText?: string;
+  corrections?: Array<{ original: string; corrected: string; position: number }>;
 }
 
 export async function transcribeAudio(
@@ -24,8 +27,19 @@ export async function transcribeAudio(
 
     const rawText = transcription as string;
 
+    // Post-processing: correggi termini medici
+    const { correctedText, corrections } = correctMedicalText(rawText);
+
+    console.log('Trascrizione raw:', rawText);
+    if (corrections.length > 0) {
+      console.log('Correzioni applicate:', corrections.length);
+      console.log('Correzioni:', corrections);
+    }
+
     return {
-      text: rawText
+      text: rawText, // Mantieni il testo raw originale
+      correctedText: corrections.length > 0 ? correctedText : undefined,
+      corrections: corrections.length > 0 ? corrections : undefined
     };
   } catch (error) {
     console.error('Errore Whisper:', error);

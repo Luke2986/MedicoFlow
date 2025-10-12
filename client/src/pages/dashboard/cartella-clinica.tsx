@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { useUser } from "@/lib/useUser";
@@ -145,13 +146,18 @@ export default function CartellaClinica() {
   const handleTranscription = (result: any) => {
     console.log('Trascrizione ricevuta:', result);
     
-    // Salva il testo grezzo della trascrizione
-    if (result?.text) {
-      setTranscriptionText(result.text);
+    // Usa il testo corretto se disponibile, altrimenti il testo raw
+    const textToUse = result?.correctedText || result?.text;
+    
+    if (textToUse) {
+      setTranscriptionText(textToUse);
       
+      const correctionCount = result?.corrections?.length || 0;
       toast({
-        title: "✨ Trascrizione completata",
-        description: "Il testo è stato trascritto correttamente",
+        title: "Trascrizione completata",
+        description: correctionCount > 0 
+          ? `${correctionCount} termini medici corretti automaticamente`
+          : "Il testo è stato trascritto correttamente",
       });
     }
   };
@@ -486,31 +492,42 @@ export default function CartellaClinica() {
           />
 
           {transcriptionText && (
-            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-              <CardContent className="pt-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <Label htmlFor="transcription" className="text-blue-900 dark:text-blue-100 font-semibold">
-                        Trascrizione Audio
-                      </Label>
+            <div className="space-y-3">
+              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <Label htmlFor="transcription" className="text-blue-900 dark:text-blue-100 font-semibold">
+                          Trascrizione Audio
+                        </Label>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        Verificabile/Editabile
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      Verificabile/Editabile
-                    </Badge>
+                    <Textarea
+                      id="transcription"
+                      value={transcriptionText}
+                      onChange={(e) => setTranscriptionText(e.target.value)}
+                      className="min-h-[120px] bg-white dark:bg-gray-950 font-mono text-sm"
+                      placeholder="La trascrizione apparirà qui..."
+                      data-testid="textarea-transcription"
+                    />
                   </div>
-                  <Textarea
-                    id="transcription"
-                    value={transcriptionText}
-                    onChange={(e) => setTranscriptionText(e.target.value)}
-                    className="min-h-[120px] bg-white dark:bg-gray-950 font-mono text-sm"
-                    placeholder="La trascrizione apparirà qui..."
-                    data-testid="textarea-transcription"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+              
+              {/* Warning: Verifica sempre la trascrizione */}
+              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <strong>Verifica obbligatoria:</strong> La trascrizione automatica può contenere errori. 
+                  Leggi attentamente e correggi eventuali inesattezze prima di copiare nei campi della visita.
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
 
           <form onSubmit={handleSubmit}>
