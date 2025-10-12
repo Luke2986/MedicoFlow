@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, index, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -205,6 +205,7 @@ export const aiUsage = pgTable("ai_usage", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   ambulatorioMonthIdx: index("ambulatorio_month_idx").on(table.ambulatorioId, table.month),
+  userMonthUnique: uniqueIndex("user_month_unique_idx").on(table.ambulatorioId, table.userId, table.month),
 }));
 
 export const aiUsageRelations = relations(aiUsage, ({ one }) => ({

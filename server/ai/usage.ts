@@ -76,11 +76,12 @@ export async function checkAIQuota(
     };
   }
 
-  // Get current month usage
+  // Get current month usage for this specific user
   const currentMonth = getCurrentMonth();
   const usage = await db.query.aiUsage.findFirst({
     where: and(
       eq(aiUsage.ambulatorioId, ambulatorioId),
+      eq(aiUsage.userId, userId),
       eq(aiUsage.month, currentMonth)
     )
   });
@@ -115,10 +116,11 @@ export async function incrementAIUsage(
     analytics: 'analyticsUsed'
   } as const;
 
-  // Check if record exists
+  // Check if record exists for this user
   const existing = await db.query.aiUsage.findFirst({
     where: and(
       eq(aiUsage.ambulatorioId, ambulatorioId),
+      eq(aiUsage.userId, userId),
       eq(aiUsage.month, currentMonth)
     )
   });

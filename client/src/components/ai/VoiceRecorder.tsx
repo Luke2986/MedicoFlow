@@ -32,6 +32,7 @@ export function VoiceRecorder({
   const [error, setError] = useState('');
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [plan, setPlan] = useState<string>('');
+  const [isLoadingQuota, setIsLoadingQuota] = useState(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -43,12 +44,15 @@ export function VoiceRecorder({
 
   const fetchQuota = async () => {
     try {
+      setIsLoadingQuota(true);
       const res = await fetch(`/api/ai/quota?ambulatorioId=${ambulatorioId}&userId=${userId}`);
       const data = await res.json();
       setQuota(data.voiceNotes);
       setPlan(data.plan);
     } catch (error) {
       console.error('Errore fetch quota:', error);
+    } finally {
+      setIsLoadingQuota(false);
     }
   };
 
