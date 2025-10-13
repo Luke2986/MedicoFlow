@@ -22,6 +22,7 @@ const PLAN_DETAILS = {
     period: "al mese",
     description: "Funzionalità essenziali per iniziare",
     features: PLANS.BASE.features,
+    popular: false,
   },
   PROFESSIONAL: {
     name: "PROFESSIONAL",
@@ -37,6 +38,7 @@ const PLAN_DETAILS = {
     period: "al mese",
     description: "Tutto illimitato con supporto dedicato",
     features: PLANS.ENTERPRISE.features,
+    popular: false,
   },
 };
 

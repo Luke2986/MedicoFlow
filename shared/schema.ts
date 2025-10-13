@@ -49,6 +49,7 @@ export const pazienti = pgTable("pazienti", {
   telefono: varchar("telefono", { length: 20 }).notNull(),
   email: text("email"),
   note: text("note"),
+  allergie: text("allergie").array(),
   ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

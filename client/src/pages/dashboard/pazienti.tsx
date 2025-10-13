@@ -688,21 +688,21 @@ export default function Pazienti() {
                 className="flex items-center justify-between p-4 rounded-md border border-border hover-elevate active-elevate-2"
                 data-testid={`card-patient-${paziente.id}`}
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
+                <Link href={`/dashboard/pazienti/${paziente.id}`} className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-semibold text-primary">
                       {paziente.nome[0]}{paziente.cognome[0]}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-card-foreground">
+                    <p className="font-semibold text-card-foreground hover:text-primary transition-colors">
                       {paziente.cognome} {paziente.nome}
                     </p>
                     <p className="text-sm text-muted-foreground truncate">
                       CF: {paziente.codiceFiscale} • Tel: {paziente.telefono}
                     </p>
                   </div>
-                </div>
+                </Link>
                 <div className="flex items-center gap-2">
                   <Link href={`/dashboard/cartella-clinica?pazienteId=${paziente.id}`}>
                     <Button 

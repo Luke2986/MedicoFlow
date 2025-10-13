@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard/index";
 import Pazienti from "@/pages/dashboard/pazienti";
+import PazienteDettaglio from "@/pages/dashboard/pazienti/[id]";
 import Appuntamenti from "@/pages/dashboard/appuntamenti";
 import CartellaClinica from "@/pages/dashboard/cartella-clinica";
 import Impostazioni from "@/pages/dashboard/impostazioni";
@@ -57,11 +58,16 @@ function Router() {
           <Dashboard />
         </DashboardLayout>
       </Route>
-      <Route path="/dashboard/pazienti">
+      <Route path="/dashboard/pazienti" component={() => (
         <DashboardLayout>
           <Pazienti />
         </DashboardLayout>
-      </Route>
+      )} />
+      <Route path="/dashboard/pazienti/:id" component={() => (
+        <DashboardLayout>
+          <PazienteDettaglio />
+        </DashboardLayout>
+      )} />
       <Route path="/dashboard/appuntamenti">
         <DashboardLayout>
           <Appuntamenti />
