@@ -118,9 +118,6 @@ export default function BillingPage() {
         
         <div>
           <h1 className="text-3xl font-bold">Abbonamento e Prezzi</h1>
-          <p className="text-muted-foreground mt-1">
-            Piano attuale: <strong>{currentPlan}</strong>
-          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
