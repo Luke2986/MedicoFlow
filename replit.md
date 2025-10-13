@@ -65,24 +65,28 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 - **Google Fonts**: For 'Inter' typeface.
 - **Groq API**: Whisper Large v3 for audio transcription.
 - **Multer**: Multipart/form-data handling for file uploads.
-- **Stripe**: Payment processing for subscription management (PROFESSIONAL: €49/month, ENTERPRISE: €149/month).
 
 ## Recent Updates (October 13, 2025)
 
-### Stripe Payment Integration
-- **Payment System**: Full Stripe integration for subscription-based billing
-  - BASE plan: Free forever with core features
-  - PROFESSIONAL plan: €49/month with AI features (150 voice transcriptions/month)
-  - ENTERPRISE plan: €149/month with unlimited AI and dedicated support
-- **Checkout Flow**: Stripe Checkout for secure payment processing with automatic redirect
-- **Subscription Management**: Stripe Customer Portal integration for self-service billing
-- **Webhook Handling**: Real-time subscription updates via Stripe webhooks
-- **Database Schema**: Extended subscriptions table with Stripe fields (stripeCustomerId, stripeSubscriptionId, stripePriceId)
+### Smoke Test Pricing System (Lead Capture)
+- **Strategy**: Smoke testing pricing before implementing payment system to validate market fit
+- **Pricing Model**: Monthly subscription tiers
+  - BASE plan: €189/month - Essential features for single practices
+  - PROFESSIONAL plan: €249/month - AI features + team collaboration (marked as "Più Popolare")
+  - ENTERPRISE plan: €599/month - Unlimited everything + dedicated support
+- **Lead Capture System**: Form-based lead generation instead of immediate payment
+  - Collects: nome, email (required), ambulatorio, telefono, note
+  - Stores leads in `pricing_leads` table with plan selection and status tracking
+  - Lead statuses: NUOVO, CONTATTATO, CONVERTITO, PERSO
+- **Database Schema**: 
+  - Table: `pricing_leads` (id, email, nome, ambulatorio, telefono, piano, note, status, createdAt)
+  - Note: `subscriptions` table still contains Stripe fields (nullable) for potential future integration
 - **Frontend Pages**: 
-  - `/pricing` - Public pricing page with plan comparison
-  - `/dashboard/impostazioni/billing` - Subscription management with upgrade/portal access
+  - `/pricing` - Public pricing page with demo request forms
+  - `/dashboard/impostazioni/billing` - Billing page with upgrade demo request forms
 - **API Endpoints**:
-  - `POST /api/stripe/create-checkout-session` - Initialize payment
-  - `POST /api/stripe/webhook` - Handle Stripe events
-  - `POST /api/stripe/create-portal-session` - Access billing portal
-  - `POST /api/stripe/cancel-subscription` - Cancel subscription
+  - `POST /api/pricing-leads` - Create new pricing lead
+  - `GET /api/pricing-leads` - Get all leads with statistics (byPlan, byStatus)
+  - `PATCH /api/pricing-leads/:id/status` - Update lead status
+- **UX Flow**: User clicks "Richiedi Demo Gratuita" → fills form → receives confirmation → sales team follow-up within 24h
+- **Future Plans**: After validating pricing, may implement Stripe or alternative payment processor
