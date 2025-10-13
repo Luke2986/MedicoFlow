@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 const AMBULATORIO_ID = "4fc2e9ce-3c28-4782-8a13-74f128cebee5";
 
 const STRIPE_PRICE_IDS = {
+  BASE: import.meta.env.VITE_STRIPE_PRICE_BASE || "price_base",
   PROFESSIONAL: import.meta.env.VITE_STRIPE_PRICE_PROFESSIONAL || "price_professional",
   ENTERPRISE: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE || "price_enterprise",
 };
@@ -24,14 +25,15 @@ const STRIPE_PRICE_IDS = {
 const PLAN_DETAILS = {
   BASE: {
     name: "BASE",
-    price: 0,
-    period: "Gratis",
+    price: 189,
+    period: "al mese",
     description: "Funzionalità essenziali per iniziare",
     features: PLANS.BASE.features,
+    priceId: STRIPE_PRICE_IDS.BASE,
   },
   PROFESSIONAL: {
     name: "PROFESSIONAL",
-    price: 49,
+    price: 249,
     period: "al mese",
     description: "AI e funzionalità avanzate",
     features: PLANS.PROFESSIONAL.features,
@@ -39,7 +41,7 @@ const PLAN_DETAILS = {
   },
   ENTERPRISE: {
     name: "ENTERPRISE",
-    price: 149,
+    price: 599,
     period: "al mese",
     description: "Tutto illimitato con supporto dedicato",
     features: PLANS.ENTERPRISE.features,
@@ -162,20 +164,19 @@ export default function BillingPage() {
       );
     }
 
-    if (planKey === "BASE") {
-      if (hasStripeSubscription) {
-        return (
-          <Button
-            variant="outline"
-            onClick={() => portalMutation.mutate()}
-            disabled={portalMutation.isPending}
-            data-testid="button-downgrade-base"
-          >
-            {portalMutation.isPending ? "Caricamento..." : "Gestisci su Stripe"}
-          </Button>
-        );
-      }
-      return null;
+    // Tutti i piani ora hanno un prezzo e possono essere cambiati
+    if (hasStripeSubscription) {
+      // Se ha già un abbonamento Stripe, usa il portale per cambiare
+      return (
+        <Button
+          variant={planKey === "PROFESSIONAL" ? "default" : "outline"}
+          onClick={() => portalMutation.mutate()}
+          disabled={portalMutation.isPending}
+          data-testid={`button-change-${planKey.toLowerCase()}`}
+        >
+          {portalMutation.isPending ? "Caricamento..." : "Gestisci su Stripe"}
+        </Button>
+      );
     }
 
     if (!plan.priceId) return null;

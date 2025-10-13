@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 const AMBULATORIO_ID = "4fc2e9ce-3c28-4782-8a13-74f128cebee5";
 
 const STRIPE_PRICE_IDS = {
+  BASE: import.meta.env.VITE_STRIPE_PRICE_BASE || "price_base",
   PROFESSIONAL: import.meta.env.VITE_STRIPE_PRICE_PROFESSIONAL || "price_professional",
   ENTERPRISE: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE || "price_enterprise",
 };
@@ -17,9 +18,9 @@ const STRIPE_PRICE_IDS = {
 const PLANS = [
   {
     name: "BASE",
-    price: 0,
-    priceId: null,
-    period: "Gratis per sempre",
+    price: 189,
+    priceId: STRIPE_PRICE_IDS.BASE,
+    period: "al mese",
     description: "Per iniziare con le funzionalità essenziali",
     features: [
       "Gestione pazienti illimitati",
@@ -34,12 +35,12 @@ const PLANS = [
       "Report avanzati",
       "Team multi-utente",
     ],
-    cta: "Piano Attuale",
+    cta: "Scegli BASE",
     variant: "outline" as const,
   },
   {
     name: "PROFESSIONAL",
-    price: 49,
+    price: 249,
     priceId: STRIPE_PRICE_IDS.PROFESSIONAL,
     period: "al mese",
     description: "Per professionisti che vogliono efficienza e AI",
@@ -53,12 +54,12 @@ const PLANS = [
     ],
     disabled: [],
     popular: true,
-    cta: "Inizia Prova Gratuita",
+    cta: "Scegli PROFESSIONAL",
     variant: "default" as const,
   },
   {
     name: "ENTERPRISE",
-    price: 149,
+    price: 599,
     priceId: STRIPE_PRICE_IDS.ENTERPRISE,
     period: "al mese",
     description: "Per ambulatori e team con necessità avanzate",
@@ -82,14 +83,6 @@ export default function Pricing() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const handleSubscribe = async (planName: string, priceId: string | null) => {
-    if (planName === "BASE") {
-      toast({
-        title: "Piano BASE",
-        description: "Sei già sul piano gratuito BASE",
-      });
-      return;
-    }
-
     if (planName === "ENTERPRISE") {
       window.location.href = "mailto:sales@medicoflow.it?subject=Richiesta Piano Enterprise";
       return;
