@@ -68,6 +68,28 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 
 ## Recent Updates (October 13, 2025)
 
+### Patient Detail Page & Medical Alerts (Latest)
+- **New Patient Detail Route**: `/dashboard/pazienti/:id` - Comprehensive patient view with medical focus
+- **Medical Alert System**: Added `allergie` field (text array) to patients schema for critical medical alerts
+  - Alert box displays prominently with red styling when allergies present
+  - Empty state when no allergies recorded
+- **Enhanced Patient Header**:
+  - Fixed header with complete demographics (nome, cognome, CF, age)
+  - Clickable contact links (tel: and mailto:)
+  - Visit statistics (total count, last visit recency)
+  - Quick access "Nuova Visita" button
+- **Expanded Visit Cards**:
+  - Multi-section preview: Diagnosi (highlighted), Terapia, Anamnesi
+  - Italian date formatting with relative time
+  - Direct access to full medical record
+  - Edit/Delete actions per visit
+- **Improved Navigation**:
+  - Breadcrumb navigation (← Pazienti / Nome Paziente)
+  - Patient list deep-links to detail pages
+  - Maintained existing cartella clinica shortcuts
+- **Database Schema**: `pazienti.allergie: text[]` auto-supported by Drizzle ORM APIs
+- **Clinical Workflow**: Optimized for quick patient overview → visit history → new visit entry
+
 ### Smoke Test Pricing System (Lead Capture)
 - **Strategy**: Smoke testing pricing before implementing payment system to validate market fit
 - **Pricing Model**: Monthly subscription tiers
