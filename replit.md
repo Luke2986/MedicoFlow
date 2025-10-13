@@ -87,6 +87,21 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
   - Edit/Delete actions per visit with confirmation dialogs
 - **Clinical Workflow**: Patient list → Edit patient → Add allergies → View cartella clinica → Alert box displays prominently
 
+### Voice Notes Integration in Cartella Clinica (Latest - October 13, 2025)
+- **Voice-to-Clinical-Notes Workflow**: Complete integration of AI transcription into clinical documentation
+  - **VoiceRecorder in Create Dialog**: Audio capture → Groq transcription → editable textarea → copy to Note Cliniche field
+  - **VoiceRecorder in Edit Dialog**: Same workflow available when modifying existing visits for addendum notes
+  - **Separate Transcription States**: Independent state management (`transcriptionText` for create, `editTranscriptionText` for edit)
+  - **Copy-to-Notes Button**: One-click transfer from transcription textarea to noteCliniche field with toast confirmation (data-testid: button-copy-transcription, button-copy-edit-transcription)
+  - **Preview Display**: Note Cliniche section added to visit preview cards with FileText icon, conditional rendering (hidden if empty)
+- **Technical Implementation**:
+  - Transcription persists through form textarea values (noteCliniche)
+  - Dialog close resets transcription state to prevent unintended carryover
+  - Submit handlers rely on textarea value for persistence
+  - All clinical sections use conditional rendering to hide empty fields
+- **User Flow**: Record audio → Review/edit transcription → Copy to Note Cliniche → Fill other fields → Save → Preview shows notes
+- **E2E Tested**: Create visit with voice notes → Save → Edit with additional notes → Preview updated successfully
+
 ### Smoke Test Pricing System (Lead Capture)
 - **Strategy**: Smoke testing pricing before implementing payment system to validate market fit
 - **Pricing Model**: Monthly subscription tiers
