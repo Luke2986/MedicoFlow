@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,12 +122,6 @@ export default function BillingPage() {
             Piano attuale: <strong>{currentPlan}</strong>
           </p>
         </div>
-
-        <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-          <AlertDescription className="text-sm">
-            💡 <strong>Smoke Test Attivo:</strong> Stiamo validando i nostri prezzi. Compilando il form riceverai un contatto personalizzato dal nostro team commerciale.
-          </AlertDescription>
-        </Alert>
 
         <div className="grid md:grid-cols-3 gap-6">
           {(Object.keys(PLAN_DETAILS) as Array<keyof typeof PLAN_DETAILS>).map((key) => {
