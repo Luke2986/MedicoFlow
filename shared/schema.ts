@@ -277,7 +277,16 @@ export const insertPazienteSchema = createInsertSchema(pazienti).omit({
     .regex(/^(\+39)?[\s]?[0-9]{9,10}$/, 'Telefono non valido (9-10 cifre)'),
 });
 
-export const updatePazienteSchema = insertPazienteSchema.partial();
+export const updatePazienteSchema = insertPazienteSchema
+  .omit({ codiceFiscale: true })
+  .partial()
+  .extend({
+    codiceFiscale: z.string()
+      .length(16, 'Il Codice Fiscale deve essere di 16 caratteri')
+      .regex(/^[A-Z0-9]{16}$/, 'Codice Fiscale deve contenere solo lettere maiuscole e numeri')
+      .transform((val) => val.toUpperCase())
+      .optional(),
+  });
 
 export const insertAppuntamentoSchema = createInsertSchema(appuntamenti).omit({
   id: true,

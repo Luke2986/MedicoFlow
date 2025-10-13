@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -211,6 +212,12 @@ export default function Pazienti() {
     
     const formData = new FormData(e.currentTarget);
     
+    // Parse allergie string to array
+    const allergieString = formData.get("allergie") as string;
+    const allergieArray = allergieString 
+      ? allergieString.split(',').map(a => a.trim()).filter(a => a.length > 0)
+      : [];
+    
     const data = {
       nome: formData.get("nome") as string,
       cognome: formData.get("cognome") as string,
@@ -225,6 +232,7 @@ export default function Pazienti() {
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string || null,
       note: formData.get("note") as string || null,
+      allergie: allergieArray.length > 0 ? allergieArray : null,
     };
 
     updateMutation.mutate({ id: selectedPaziente.id, data });
@@ -445,6 +453,25 @@ export default function Pazienti() {
               <div className="space-y-2">
                 <Label htmlFor="edit-note">Note</Label>
                 <Input id="edit-note" name="note" defaultValue={selectedPaziente.note || ''} data-testid="input-edit-note" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-allergie" className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600" />
+                  Allergie (separate da virgola)
+                </Label>
+                <Textarea 
+                  id="edit-allergie" 
+                  name="allergie" 
+                  placeholder="es. Penicillina, Lattosio, Polen" 
+                  defaultValue={selectedPaziente.allergie?.join(', ') || ''}
+                  rows={2}
+                  data-testid="input-edit-allergie"
+                  className="font-medium"
+                />
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ Le allergie verranno mostrate in evidenza nella cartella clinica
+                </p>
               </div>
 
               <DialogFooter>

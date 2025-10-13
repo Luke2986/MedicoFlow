@@ -267,6 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/pazienti/:id", async (req, res) => {
     try {
+      // Normalize telefono by removing spaces, dashes, parentheses
+      if (req.body.telefono) {
+        req.body.telefono = req.body.telefono.replace(/[\s\-\(\)]/g, '');
+      }
+      
       const data = updatePazienteSchema.parse(req.body);
       const paziente = await storage.updatePaziente(req.params.id, data);
       res.json(paziente);

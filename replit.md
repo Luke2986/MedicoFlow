@@ -68,27 +68,24 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 
 ## Recent Updates (October 13, 2025)
 
-### Patient Detail Page & Medical Alerts (Latest)
-- **New Patient Detail Route**: `/dashboard/pazienti/:id` - Comprehensive patient view with medical focus
-- **Medical Alert System**: Added `allergie` field (text array) to patients schema for critical medical alerts
-  - Alert box displays prominently with red styling when allergies present
-  - Empty state when no allergies recorded
-- **Enhanced Patient Header**:
-  - Fixed header with complete demographics (nome, cognome, CF, age)
-  - Clickable contact links (tel: and mailto:)
-  - Visit statistics (total count, last visit recency)
-  - Quick access "Nuova Visita" button
-- **Expanded Visit Cards**:
-  - Multi-section preview: Diagnosi (highlighted), Terapia, Anamnesi
-  - Italian date formatting with relative time
-  - Direct access to full medical record
-  - Edit/Delete actions per visit
-- **Improved Navigation**:
-  - Breadcrumb navigation (← Pazienti / Nome Paziente)
-  - Patient list deep-links to detail pages
-  - Maintained existing cartella clinica shortcuts
-- **Database Schema**: `pazienti.allergie: text[]` auto-supported by Drizzle ORM APIs
-- **Clinical Workflow**: Optimized for quick patient overview → visit history → new visit entry
+### Medical Alerts & Allergie Management (Latest - October 13, 2025)
+- **Allergie Field Integration**: Added `allergie` field (text array) to patients schema for critical medical alerts
+  - **Edit Patient Dialog** (`/dashboard/pazienti`): Textarea input with AlertTriangle icon for entering comma-separated allergies
+  - **Cartella Clinica** (`/dashboard/cartella-clinica`): Prominent red alert box displays allergies when present, empty state when none recorded
+  - **Data Flow**: Frontend converts comma-separated string → array before API submission, backend stores as text[]
+- **Schema Validation Improvements**:
+  - **Update Schema**: `updatePazienteSchema` uses `.omit()` + `.partial()` + `.extend()` pattern to handle legacy data
+  - **Codice Fiscale**: Update validation skips checksum verification (format & length only) to accept existing test data
+  - **Telefono**: Backend normalizes by stripping spaces/dashes/parentheses before validation in PATCH route handler
+  - **Rationale**: Insert operations maintain strict validation; updates accept legacy formats while preserving data integrity
+- **Cartella Clinica Enhanced**:
+  - Fixed patient header with demographics (nome, cognome, CF, age calculated from birthdate)
+  - Clickable contact links (tel: and mailto:) for immediate communication
+  - Medical alert box for allergies with red background and warning icon
+  - Expanded visit cards with multi-section preview (Diagnosi highlighted in blue, Terapia, Anamnesi)
+  - Italian date formatting with relative time ("2 giorni fa")
+  - Edit/Delete actions per visit with confirmation dialogs
+- **Clinical Workflow**: Patient list → Edit patient → Add allergies → View cartella clinica → Alert box displays prominently
 
 ### Smoke Test Pricing System (Lead Capture)
 - **Strategy**: Smoke testing pricing before implementing payment system to validate market fit

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, differenceInYears, formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Visita, Paziente } from "@shared/schema";
 
@@ -217,79 +217,160 @@ export default function CartellaClinica() {
   };
 
   const pazienteSelezionato = pazienti.find(p => p.id === selectedPaziente);
+  
+  // Calcolo età e ultima visita
+  const eta = pazienteSelezionato ? differenceInYears(new Date(), new Date(pazienteSelezionato.dataNascita)) : 0;
+  const ultimaVisita = visiteSortedCronologicamente[0];
+  const giorniDaUltimaVisita = ultimaVisita 
+    ? formatDistanceToNow(new Date(ultimaVisita.dataVisita), { addSuffix: true, locale: it })
+    : null;
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
       {selectedPaziente && pazienteSelezionato && (
-        <nav className="flex items-center space-x-2 text-sm text-muted-foreground" data-testid="breadcrumb-nav">
-          <Link href="/dashboard" className="hover:text-foreground">Dashboard</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href="/dashboard/pazienti" className="hover:text-foreground">Pazienti</Link>
-          <ChevronRight className="w-4 h-4" />
+        <nav className="flex items-center gap-2 text-sm" data-testid="breadcrumb-nav">
+          <Link href="/dashboard/pazienti" className="text-primary hover:underline flex items-center gap-1">
+            <ArrowLeft className="w-4 h-4" />
+            Pazienti
+          </Link>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
           <span className="text-foreground font-medium">
             {pazienteSelezionato.cognome} {pazienteSelezionato.nome}
           </span>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground">Cartella Clinica</span>
         </nav>
       )}
-      
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-cartella-title">
-            Cartella Clinica
-          </h1>
-          <p className="text-muted-foreground">
-            Gestisci le visite e lo storico clinico dei pazienti
-          </p>
-        </div>
-        {selectedPaziente && (
-          <Button 
-            onClick={() => setDialogOpen(true)}
-            data-testid="button-nuova-visita"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuova Visita
-          </Button>
-        )}
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Seleziona Paziente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedPaziente} onValueChange={setSelectedPaziente}>
-            <SelectTrigger data-testid="select-paziente">
-              <SelectValue placeholder="Seleziona un paziente..." />
-            </SelectTrigger>
-            <SelectContent>
-              {pazienti.map((paziente) => (
-                <SelectItem key={paziente.id} value={paziente.id} data-testid={`select-item-${paziente.id}`}>
-                  {paziente.cognome} {paziente.nome} - {paziente.codiceFiscale}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      {/* Seleziona Paziente (solo se non selezionato) */}
+      {!selectedPaziente && (
+        <>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-cartella-title">
+              Cartella Clinica
+            </h1>
+            <p className="text-muted-foreground">
+              Gestisci le visite e lo storico clinico dei pazienti
+            </p>
+          </div>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Seleziona Paziente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={selectedPaziente} onValueChange={setSelectedPaziente}>
+                <SelectTrigger data-testid="select-paziente">
+                  <SelectValue placeholder="Seleziona un paziente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pazienti.map((paziente) => (
+                    <SelectItem key={paziente.id} value={paziente.id} data-testid={`select-item-${paziente.id}`}>
+                      {paziente.cognome} {paziente.nome} - {paziente.codiceFiscale}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* Header Paziente Fisso */}
       {selectedPaziente && pazienteSelezionato && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="w-5 h-5" />
-                {pazienteSelezionato.cognome} {pazienteSelezionato.nome}
-              </CardTitle>
-              <Badge variant="outline" data-testid={`badge-visite-count`}>
-                {visite.length} {visite.length === 1 ? 'visita' : 'visite'}
-              </Badge>
+        <Card className="bg-card border-border" data-testid="card-header-paziente">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-primary/10 rounded-full">
+                    <User className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-foreground">
+                      {pazienteSelezionato.cognome} {pazienteSelezionato.nome}
+                    </h1>
+                    <p className="text-muted-foreground font-mono text-sm mt-1">
+                      CF: {pazienteSelezionato.codiceFiscale}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {eta} anni ({format(new Date(pazienteSelezionato.dataNascita), "d/MM/yyyy")})
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    <a 
+                      href={`tel:${pazienteSelezionato.telefono}`}
+                      className="text-sm text-primary hover:underline"
+                      data-testid="link-telefono"
+                    >
+                      {pazienteSelezionato.telefono}
+                    </a>
+                  </div>
+
+                  {pazienteSelezionato.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <a 
+                        href={`mailto:${pazienteSelezionato.email}`}
+                        className="text-sm text-primary hover:underline"
+                        data-testid="link-email"
+                      >
+                        {pazienteSelezionato.email}
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-foreground">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {visite.length} visite{giorniDaUltimaVisita && ` • ${giorniDaUltimaVisita}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => setDialogOpen(true)}
+                data-testid="button-nuova-visita"
+                className="gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Nuova Visita
+              </Button>
             </div>
-          </CardHeader>
+          </CardContent>
         </Card>
       )}
 
+      {/* Alert Box Allergie */}
+      {selectedPaziente && pazienteSelezionato && pazienteSelezionato.allergie && pazienteSelezionato.allergie.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-5 rounded-lg" data-testid="alert-allergie">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900 dark:text-red-100 text-lg mb-2">
+                ⚠️ Attenzione - Allergie
+              </h3>
+              <ul className="space-y-1">
+                {pazienteSelezionato.allergie.map((allergia, idx) => (
+                  <li key={idx} className="text-red-800 dark:text-red-200 font-medium">
+                    • {allergia}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Storico Visite */}
       {selectedPaziente && (
         <div className="space-y-4">
           {isLoading ? (
@@ -326,116 +407,112 @@ export default function CartellaClinica() {
             </Card>
           ) : (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-foreground">Storico Visite (Cronologico)</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-foreground">
+                  Storico Clinico ({visite.length} visite)
+                </h2>
+              </div>
+
               {visiteSortedCronologicamente.map((visita) => (
-                <Card key={visita.id} className="hover-elevate" data-testid={`card-visita-${visita.id}`}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <CalendarIcon className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-semibold text-foreground" data-testid={`text-data-${visita.id}`}>
-                            {format(new Date(visita.dataVisita), "d MMMM yyyy", { locale: it })}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {visita.motivoVisita}
-                          </p>
-                        </div>
+                <Card key={visita.id} className="hover-elevate active-elevate-2" data-testid={`card-visita-${visita.id}`}>
+                  <CardContent className="p-6">
+                    {/* Header Visita */}
+                    <div className="flex items-start justify-between mb-4 pb-4 border-b">
+                      <div>
+                        <h3 className="text-xl font-semibold text-foreground mb-1" data-testid={`text-data-${visita.id}`}>
+                          📅 {format(new Date(visita.dataVisita), "d MMMM yyyy", { locale: it })}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {visita.motivoVisita}
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => {
                             setSelectedVisita(visita);
                             setEditDialogOpen(true);
                           }}
                           data-testid={`button-edit-${visita.id}`}
+                          className="gap-1"
                         >
                           <Pencil className="w-4 h-4" />
+                          Modifica
                         </Button>
                         <Button
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => {
                             setSelectedVisita(visita);
                             setDeleteDialogOpen(true);
                           }}
                           data-testid={`button-delete-${visita.id}`}
+                          className="gap-1 text-destructive hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
+                          Elimina
                         </Button>
                       </div>
                     </div>
 
+                    {/* Body - Sezioni Cliniche */}
                     <div className="space-y-4">
-                      {visita.anamnesi && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Anamnesi</h4>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-anamnesi-${visita.id}`}>
-                            {visita.anamnesi}
+                      {/* Diagnosi - Highlighted */}
+                      {visita.diagnosi && (
+                        <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 p-4 rounded">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <Stethoscope className="w-4 h-4" />
+                            Diagnosi
+                          </p>
+                          <p className="text-foreground font-medium leading-relaxed" data-testid={`text-diagnosi-${visita.id}`}>
+                            {visita.diagnosi}
                           </p>
                         </div>
                       )}
 
-                      {visita.esameObiettivo && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Esame Obiettivo</h4>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-esame-obiettivo-${visita.id}`}>
-                            {visita.esameObiettivo}
-                          </p>
-                        </div>
-                      )}
-
-                      {visita.esamiEseguiti && (
-                        <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Esami Strumentali / Laboratorio</h4>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-esami-${visita.id}`}>
-                            {visita.esamiEseguiti}
-                          </p>
-                        </div>
-                      )}
-
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-1">Diagnosi</h4>
-                        <p className="text-sm text-muted-foreground" data-testid={`text-diagnosi-${visita.id}`}>
-                          {visita.diagnosi}
-                        </p>
-                      </div>
-
+                      {/* Terapia */}
                       {visita.terapia && (
                         <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Terapia</h4>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-terapia-${visita.id}`}>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <Pill className="w-4 h-4" />
+                            Terapia
+                          </p>
+                          <p className="text-foreground leading-relaxed line-clamp-2" data-testid={`text-terapia-${visita.id}`}>
                             {visita.terapia}
                           </p>
                         </div>
                       )}
 
-                      {visita.prescrizioneFarmaci && (
+                      {/* Anamnesi */}
+                      {visita.anamnesi && (
                         <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Prescrizioni</h4>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-prescrizioni-${visita.id}`}>
-                            {visita.prescrizioneFarmaci}
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Anamnesi
+                          </p>
+                          <p className="text-foreground leading-relaxed line-clamp-2" data-testid={`text-anamnesi-${visita.id}`}>
+                            {visita.anamnesi}
                           </p>
                         </div>
                       )}
 
-                      {visita.noteCliniche && (
+                      {/* Esame Obiettivo */}
+                      {visita.esameObiettivo && (
                         <div>
-                          <h4 className="text-sm font-semibold text-foreground mb-1">Note Cliniche</h4>
-                          <p className="text-sm text-muted-foreground" data-testid={`text-note-${visita.id}`}>
-                            {visita.noteCliniche}
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <Stethoscope className="w-4 h-4" />
+                            Esame Obiettivo
+                          </p>
+                          <p className="text-foreground leading-relaxed line-clamp-2" data-testid={`text-esame-obiettivo-${visita.id}`}>
+                            {visita.esameObiettivo}
                           </p>
                         </div>
                       )}
 
+                      {/* Parametri Vitali */}
                       {(visita.peso || visita.altezza || visita.pressioneSistolica || visita.frequenzaCardiaca || visita.temperatura) && (
-                        <div className="flex items-center gap-6 pt-2 border-t">
-                          <div className="flex items-center gap-2">
-                            <Activity className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm font-medium text-foreground">Parametri Vitali:</span>
-                          </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-2">
                           {visita.peso && (
                             <Badge variant="outline" data-testid={`badge-peso-${visita.id}`}>
                               Peso: {visita.peso} kg
@@ -443,12 +520,12 @@ export default function CartellaClinica() {
                           )}
                           {visita.altezza && (
                             <Badge variant="outline" data-testid={`badge-altezza-${visita.id}`}>
-                              Altezza: {visita.altezza} cm
+                              Alt: {visita.altezza} cm
                             </Badge>
                           )}
                           {visita.pressioneSistolica && visita.pressioneDiastolica && (
                             <Badge variant="outline" data-testid={`badge-pressione-${visita.id}`}>
-                              PA: {visita.pressioneSistolica}/{visita.pressioneDiastolica} mmHg
+                              PA: {visita.pressioneSistolica}/{visita.pressioneDiastolica}
                             </Badge>
                           )}
                           {visita.frequenzaCardiaca && (
@@ -458,7 +535,7 @@ export default function CartellaClinica() {
                           )}
                           {visita.temperatura && (
                             <Badge variant="outline" data-testid={`badge-temperatura-${visita.id}`}>
-                              T: {(visita.temperatura / 10).toFixed(1)} °C
+                              T: {(visita.temperatura / 10).toFixed(1)}°C
                             </Badge>
                           )}
                         </div>
