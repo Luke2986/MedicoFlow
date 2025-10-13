@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill, Copy } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
@@ -53,6 +53,7 @@ export default function CartellaClinica() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVisita, setSelectedVisita] = useState<Visita | null>(null);
   const [transcriptionText, setTranscriptionText] = useState<string>("");
+  const [editTranscriptionText, setEditTranscriptionText] = useState<string>("");
   const { toast } = useToast();
 
   // Leggi pazienteId da URL params e seleziona automaticamente
@@ -510,6 +511,19 @@ export default function CartellaClinica() {
                         </div>
                       )}
 
+                      {/* Note Cliniche */}
+                      {visita.noteCliniche && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Note Cliniche
+                          </p>
+                          <p className="text-foreground leading-relaxed line-clamp-2" data-testid={`text-note-${visita.id}`}>
+                            {visita.noteCliniche}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Parametri Vitali */}
                       {(visita.peso || visita.altezza || visita.pressioneSistolica || visita.frequenzaCardiaca || visita.temperatura) && (
                         <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -551,7 +565,12 @@ export default function CartellaClinica() {
 
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         setDialogOpen(open);
-        if (!open) setTranscriptionText(""); // Reset quando chiudi
+        if (!open) {
+          setTranscriptionText("");
+          // Reset anche il campo note cliniche
+          const noteField = document.getElementById('noteCliniche') as HTMLTextAreaElement;
+          if (noteField) noteField.value = "";
+        }
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -592,6 +611,26 @@ export default function CartellaClinica() {
                       placeholder="La trascrizione apparirà qui..."
                       data-testid="textarea-transcription"
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => {
+                        const noteField = document.getElementById('noteCliniche') as HTMLTextAreaElement;
+                        if (noteField) {
+                          noteField.value = transcriptionText;
+                          toast({
+                            title: "Trascrizione copiata",
+                            description: "La trascrizione è stata copiata nelle note cliniche",
+                          });
+                        }
+                      }}
+                      data-testid="button-copy-transcription"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copia nelle Note Cliniche
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -790,7 +829,10 @@ export default function CartellaClinica() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) setEditTranscriptionText("");
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifica Visita</DialogTitle>
@@ -798,6 +840,75 @@ export default function CartellaClinica() {
               Aggiorna i dati della visita medica
             </DialogDescription>
           </DialogHeader>
+          
+          <VoiceRecorder 
+            ambulatorioId={ambulatorioId}
+            userId={userId}
+            onTranscriptionComplete={(result) => {
+              const text = result.correctedText || result.text;
+              setEditTranscriptionText(text);
+            }}
+            disabled={updateMutation.isPending}
+          />
+
+          {editTranscriptionText && (
+            <div className="space-y-3">
+              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <Label htmlFor="edit-transcription" className="text-blue-900 dark:text-blue-100 font-semibold">
+                          Trascrizione Audio
+                        </Label>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        Verificabile/Editabile
+                      </Badge>
+                    </div>
+                    <Textarea
+                      id="edit-transcription"
+                      value={editTranscriptionText}
+                      onChange={(e) => setEditTranscriptionText(e.target.value)}
+                      className="min-h-[120px] bg-white dark:bg-gray-950 font-mono text-sm"
+                      placeholder="La trascrizione apparirà qui..."
+                      data-testid="textarea-edit-transcription"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => {
+                        const noteField = document.getElementById('edit-noteCliniche') as HTMLTextAreaElement;
+                        if (noteField) {
+                          noteField.value = editTranscriptionText;
+                          toast({
+                            title: "Trascrizione copiata",
+                            description: "La trascrizione è stata copiata nelle note cliniche",
+                          });
+                        }
+                      }}
+                      data-testid="button-copy-edit-transcription"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copia nelle Note Cliniche
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  <strong>Verifica obbligatoria:</strong> La trascrizione automatica può contenere errori. 
+                  Leggi attentamente e correggi eventuali inesattezze prima di copiare nei campi della visita.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+          
           {selectedVisita && (
             <form onSubmit={handleEditSubmit}>
               <div className="grid gap-4 py-4">
