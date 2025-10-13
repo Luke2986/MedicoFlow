@@ -1,8 +1,10 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { startOfWeek, endOfWeek } from "date-fns";
+import Stripe from "stripe";
 import { 
   insertAmbulatorioSchema,
   updateAmbulatorioSchema,
@@ -16,11 +18,120 @@ import {
   updateSubscriptionSchema,
 } from "@shared/schema";
 
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2024-12-18.acacia",
+});
+
 const statsQuerySchema = z.object({
   ambulatorioId: z.string().uuid("ambulatorioId deve essere un UUID valido"),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Stripe webhook needs raw body for signature verification
+  app.post("/api/stripe/webhook", 
+    express.raw({ type: 'application/json' }),
+    async (req, res) => {
+      const sig = req.headers['stripe-signature'];
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+      if (!sig) {
+        return res.status(400).send('Missing stripe-signature header');
+      }
+
+      let event: Stripe.Event;
+
+      try {
+        // Verify webhook signature
+        if (webhookSecret) {
+          event = stripe.webhooks.constructEvent(
+            req.body,
+            sig,
+            webhookSecret
+          );
+        } else {
+          // Development mode: accept without verification (NOT FOR PRODUCTION)
+          console.warn('⚠️  Stripe webhook signature verification disabled - set STRIPE_WEBHOOK_SECRET');
+          event = JSON.parse(req.body.toString());
+        }
+      } catch (err: any) {
+        console.error('Webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+
+      // Handle the event
+      try {
+        switch (event.type) {
+          case 'checkout.session.completed':
+            const session = event.data.object as Stripe.Checkout.Session;
+            const ambulatorioId = session.metadata?.ambulatorioId;
+            const piano = session.metadata?.piano as "BASE" | "PROFESSIONAL" | "ENTERPRISE";
+
+            if (ambulatorioId && piano) {
+              const subscriptionId = session.subscription as string;
+              const customerId = session.customer as string;
+
+              await storage.updateSubscription(ambulatorioId, {
+                piano: piano,
+                status: "ACTIVE",
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                stripePriceId: session.metadata?.priceId || null,
+              });
+
+              console.log(`✅ Subscription updated for ambulatorio ${ambulatorioId}: ${piano}`);
+            }
+            break;
+
+          case 'customer.subscription.updated':
+            const updatedSub = event.data.object as Stripe.Subscription;
+            const subs = await storage.getAllSubscriptions();
+            const matchingSub = subs.find(s => s.stripeCustomerId === updatedSub.customer);
+
+            if (matchingSub) {
+              const newStatus = updatedSub.status === 'active' ? 'ACTIVE' : 
+                               updatedSub.status === 'canceled' ? 'CANCELLED' : 'ACTIVE';
+
+              await storage.updateSubscription(matchingSub.ambulatorioId, {
+                status: newStatus,
+                stripeSubscriptionId: updatedSub.id,
+              });
+
+              console.log(`✅ Subscription status updated: ${newStatus}`);
+            }
+            break;
+
+          case 'customer.subscription.deleted':
+            const deletedSub = event.data.object as Stripe.Subscription;
+            const allSubs = await storage.getAllSubscriptions();
+            const deletedMatchingSub = allSubs.find(s => s.stripeSubscriptionId === deletedSub.id);
+
+            if (deletedMatchingSub) {
+              await storage.updateSubscription(deletedMatchingSub.ambulatorioId, {
+                status: "CANCELLED",
+                piano: "BASE",
+                stripeSubscriptionId: null,
+              });
+
+              console.log(`✅ Subscription cancelled for ambulatorio ${deletedMatchingSub.ambulatorioId}`);
+            }
+            break;
+
+          default:
+            console.log(`Unhandled event type: ${event.type}`);
+        }
+
+        res.json({ received: true });
+      } catch (error: any) {
+        console.error('Error processing webhook:', error);
+        res.status(500).json({ error: 'Webhook processing failed' });
+      }
+    }
+  );
   
   app.get("/api/ambulatori-list", async (req, res) => {
     try {
@@ -570,6 +681,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Errore quota:', error);
       res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
+  // Stripe - Create checkout session for subscription
+  app.post("/api/stripe/create-checkout-session", async (req, res) => {
+    try {
+      const { ambulatorioId, piano, priceId } = req.body;
+
+      if (!ambulatorioId || !piano || !priceId) {
+        return res.status(400).json({ error: "Parametri mancanti" });
+      }
+
+      const ambulatorio = await storage.getAmbulatorio(ambulatorioId);
+      if (!ambulatorio) {
+        return res.status(404).json({ error: "Ambulatorio non trovato" });
+      }
+
+      const subscription = await storage.getSubscription(ambulatorioId);
+
+      let customerId = subscription?.stripeCustomerId;
+
+      // Create Stripe customer if doesn't exist
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: ambulatorio.email,
+          name: ambulatorio.nome,
+          metadata: {
+            ambulatorioId: ambulatorioId,
+          },
+        });
+        customerId = customer.id;
+
+        // Update subscription with customer ID
+        if (subscription) {
+          await storage.updateSubscription(ambulatorioId, {
+            stripeCustomerId: customerId,
+          });
+        }
+      }
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "subscription",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        success_url: `${req.headers.origin}/dashboard/impostazioni/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/pricing?canceled=true`,
+        metadata: {
+          ambulatorioId: ambulatorioId,
+          piano: piano,
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Stripe checkout error:", error);
+      res.status(500).json({ error: error.message || "Errore creazione checkout" });
+    }
+  });
+
+
+  // Stripe - Cancel subscription
+  app.post("/api/stripe/cancel-subscription", async (req, res) => {
+    try {
+      const { ambulatorioId } = req.body;
+
+      if (!ambulatorioId) {
+        return res.status(400).json({ error: "ambulatorioId richiesto" });
+      }
+
+      const subscription = await storage.getSubscription(ambulatorioId);
+
+      if (!subscription?.stripeSubscriptionId) {
+        return res.status(404).json({ error: "Abbonamento non trovato" });
+      }
+
+      // Cancel at period end
+      await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+
+      await storage.updateSubscription(ambulatorioId, {
+        status: "CANCELLED",
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      res.status(500).json({ error: error.message || "Errore cancellazione abbonamento" });
+    }
+  });
+
+  // Stripe - Get subscription portal
+  app.post("/api/stripe/create-portal-session", async (req, res) => {
+    try {
+      const { ambulatorioId } = req.body;
+
+      if (!ambulatorioId) {
+        return res.status(400).json({ error: "ambulatorioId richiesto" });
+      }
+
+      const subscription = await storage.getSubscription(ambulatorioId);
+
+      if (!subscription?.stripeCustomerId) {
+        return res.status(404).json({ error: "Cliente Stripe non trovato" });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: subscription.stripeCustomerId,
+        return_url: `${req.headers.origin}/settings`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Portal session error:", error);
+      res.status(500).json({ error: error.message || "Errore creazione portale" });
     }
   });
 

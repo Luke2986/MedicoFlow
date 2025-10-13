@@ -68,6 +68,7 @@ export interface IStorage {
   deleteVisita(id: string): Promise<void>;
   
   getSubscription(ambulatorioId: string): Promise<Subscription | undefined>;
+  getAllSubscriptions(): Promise<Subscription[]>;
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateSubscription(ambulatorioId: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
 }
@@ -397,6 +398,10 @@ export class DatabaseStorage implements IStorage {
       .from(subscriptions)
       .where(eq(subscriptions.ambulatorioId, ambulatorioId));
     return subscription || undefined;
+  }
+
+  async getAllSubscriptions(): Promise<Subscription[]> {
+    return await db.select().from(subscriptions);
   }
 
   async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {

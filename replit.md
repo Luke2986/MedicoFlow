@@ -65,3 +65,24 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 - **Google Fonts**: For 'Inter' typeface.
 - **Groq API**: Whisper Large v3 for audio transcription.
 - **Multer**: Multipart/form-data handling for file uploads.
+- **Stripe**: Payment processing for subscription management (PROFESSIONAL: €49/month, ENTERPRISE: €149/month).
+
+## Recent Updates (October 13, 2025)
+
+### Stripe Payment Integration
+- **Payment System**: Full Stripe integration for subscription-based billing
+  - BASE plan: Free forever with core features
+  - PROFESSIONAL plan: €49/month with AI features (150 voice transcriptions/month)
+  - ENTERPRISE plan: €149/month with unlimited AI and dedicated support
+- **Checkout Flow**: Stripe Checkout for secure payment processing with automatic redirect
+- **Subscription Management**: Stripe Customer Portal integration for self-service billing
+- **Webhook Handling**: Real-time subscription updates via Stripe webhooks
+- **Database Schema**: Extended subscriptions table with Stripe fields (stripeCustomerId, stripeSubscriptionId, stripePriceId)
+- **Frontend Pages**: 
+  - `/pricing` - Public pricing page with plan comparison
+  - `/dashboard/impostazioni/billing` - Subscription management with upgrade/portal access
+- **API Endpoints**:
+  - `POST /api/stripe/create-checkout-session` - Initialize payment
+  - `POST /api/stripe/webhook` - Handle Stripe events
+  - `POST /api/stripe/create-portal-session` - Access billing portal
+  - `POST /api/stripe/cancel-subscription` - Cancel subscription

@@ -19,6 +19,7 @@ import ImpostazioniTeam from "@/pages/dashboard/impostazioni/team";
 import ImpostazioniNotifiche from "@/pages/dashboard/impostazioni/notifiche";
 import ImpostazioniPrivacy from "@/pages/dashboard/impostazioni/privacy";
 import ImpostazioniSupporto from "@/pages/dashboard/impostazioni/supporto";
+import Pricing from "@/pages/pricing";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -50,6 +51,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/pricing" component={Pricing} />
       <Route path="/dashboard">
         <DashboardLayout>
           <Dashboard />
