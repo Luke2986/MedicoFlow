@@ -6,6 +6,7 @@ import {
   appuntamenti,
   visite,
   subscriptions,
+  pricingLeads,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -18,6 +19,8 @@ import {
   type InsertVisita,
   type Subscription,
   type InsertSubscription,
+  type PricingLead,
+  type InsertPricingLead,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
@@ -71,6 +74,11 @@ export interface IStorage {
   getAllSubscriptions(): Promise<Subscription[]>;
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateSubscription(ambulatorioId: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
+  
+  getPricingLeads(): Promise<PricingLead[]>;
+  getPricingLead(id: string): Promise<PricingLead | undefined>;
+  createPricingLead(lead: InsertPricingLead): Promise<PricingLead>;
+  updatePricingLeadStatus(id: string, status: "NUOVO" | "CONTATTATO" | "CONVERTITO" | "PERSO"): Promise<PricingLead>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -419,6 +427,39 @@ export class DatabaseStorage implements IStorage {
       .where(eq(subscriptions.ambulatorioId, ambulatorioId))
       .returning();
     return subscription;
+  }
+
+  async getPricingLeads(): Promise<PricingLead[]> {
+    return await db
+      .select()
+      .from(pricingLeads)
+      .orderBy(desc(pricingLeads.createdAt));
+  }
+
+  async getPricingLead(id: string): Promise<PricingLead | undefined> {
+    const [lead] = await db
+      .select()
+      .from(pricingLeads)
+      .where(eq(pricingLeads.id, id));
+    return lead || undefined;
+  }
+
+  async createPricingLead(insertLead: InsertPricingLead): Promise<PricingLead> {
+    const [lead] = await db
+      .insert(pricingLeads)
+      .values(insertLead)
+      .returning();
+    return lead;
+  }
+
+  async updatePricingLeadStatus(id: string, status: "NUOVO" | "CONTATTATO" | "CONVERTITO" | "PERSO"): Promise<PricingLead> {
+    const [lead] = await db
+      .update(pricingLeads)
+      .set({ status })
+      .where(eq(pricingLeads.id, id))
+      .returning();
+    if (!lead) throw new Error("Lead non trovato");
+    return lead;
   }
 }
 

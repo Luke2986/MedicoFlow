@@ -222,6 +222,25 @@ export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
   }),
 }));
 
+export const leadStatusEnum = pgEnum("lead_status", ["NUOVO", "CONTATTATO", "CONVERTITO", "PERSO"]);
+
+export const pricingLeads = pgTable("pricing_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  nome: text("nome").notNull(),
+  ambulatorio: text("ambulatorio"),
+  telefono: varchar("telefono", { length: 20 }),
+  piano: pianoEnum("piano").notNull(),
+  note: text("note"),
+  status: leadStatusEnum("status").notNull().default("NUOVO"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  pianoIdx: index("piano_idx").on(table.piano),
+  statusIdx: index("status_idx").on(table.status),
+  createdAtIdx: index("created_at_idx").on(table.createdAt),
+  emailIdx: index("email_idx").on(table.email),
+}));
+
 export const insertAmbulatorioSchema = createInsertSchema(ambulatori).omit({
   id: true,
   createdAt: true,
@@ -316,3 +335,16 @@ export const insertAIUsageSchema = createInsertSchema(aiUsage).omit({
 
 export type AIUsage = typeof aiUsage.$inferSelect;
 export type InsertAIUsage = z.infer<typeof insertAIUsageSchema>;
+
+export const insertPricingLeadSchema = createInsertSchema(pricingLeads).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+});
+
+export const updatePricingLeadSchema = insertPricingLeadSchema.partial().extend({
+  status: z.enum(["NUOVO", "CONTATTATO", "CONVERTITO", "PERSO"]).optional(),
+});
+
+export type PricingLead = typeof pricingLeads.$inferSelect;
+export type InsertPricingLead = z.infer<typeof insertPricingLeadSchema>;

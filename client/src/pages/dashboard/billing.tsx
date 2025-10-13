@@ -1,26 +1,20 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PLANS, type PlanKey } from "@shared/features";
 import { type Subscription } from "@shared/schema";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
-import { Check, CreditCard, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Sparkles, X, CheckCircle2 } from "lucide-react";
 
-// Hardcoded ambulatorio ID (no auth system)
 const AMBULATORIO_ID = "4fc2e9ce-3c28-4782-8a13-74f128cebee5";
-
-const STRIPE_PRICE_IDS = {
-  BASE: import.meta.env.VITE_STRIPE_PRICE_BASE || "price_base",
-  PROFESSIONAL: import.meta.env.VITE_STRIPE_PRICE_PROFESSIONAL || "price_professional",
-  ENTERPRISE: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE || "price_enterprise",
-};
 
 const PLAN_DETAILS = {
   BASE: {
@@ -29,7 +23,6 @@ const PLAN_DETAILS = {
     period: "al mese",
     description: "Funzionalità essenziali per iniziare",
     features: PLANS.BASE.features,
-    priceId: STRIPE_PRICE_IDS.BASE,
   },
   PROFESSIONAL: {
     name: "PROFESSIONAL",
@@ -37,7 +30,7 @@ const PLAN_DETAILS = {
     period: "al mese",
     description: "AI e funzionalità avanzate",
     features: PLANS.PROFESSIONAL.features,
-    priceId: STRIPE_PRICE_IDS.PROFESSIONAL,
+    popular: true,
   },
   ENTERPRISE: {
     name: "ENTERPRISE",
@@ -45,99 +38,69 @@ const PLAN_DETAILS = {
     period: "al mese",
     description: "Tutto illimitato con supporto dedicato",
     features: PLANS.ENTERPRISE.features,
-    priceId: STRIPE_PRICE_IDS.ENTERPRISE,
   },
 };
 
 export default function BillingPage() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<keyof typeof PLAN_DETAILS | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [formData, setFormData] = useState({
+    nome: "",
+    email: "",
+    ambulatorio: "",
+    telefono: "",
+    note: "",
+  });
 
   const { data: subscription, isLoading } = useQuery<Subscription>({
     queryKey: ["/api/subscription", AMBULATORIO_ID],
-    queryFn: async () => {
-      const res = await fetch(`/api/subscription?ambulatorioId=${AMBULATORIO_ID}`);
-      if (!res.ok) throw new Error("Errore caricamento subscription");
-      return res.json();
-    }
   });
 
-  // Check for success payment
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const success = urlParams.get("success");
-    const sessionId = urlParams.get("session_id");
+  const handlePlanSelect = (planKey: keyof typeof PLAN_DETAILS) => {
+    setSelectedPlan(planKey);
+    setShowModal(true);
+  };
 
-    if (success === "true" && sessionId) {
-      toast({
-        title: "Pagamento completato",
-        description: "Il tuo abbonamento è stato attivato con successo",
-      });
-      
-      // Refresh subscription data
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      
-      // Clean URL
-      window.history.replaceState({}, "", "/dashboard/impostazioni/billing");
-    }
-  }, [toast]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  const checkoutMutation = useMutation({
-    mutationFn: async ({ piano, priceId }: { piano: string; priceId: string }) => {
-      const response = await apiRequest("POST", "/api/stripe/create-checkout-session", {
-        ambulatorioId: AMBULATORIO_ID,
-        piano,
-        priceId,
+    try {
+      const res = await apiRequest("POST", "/api/pricing-leads", {
+        ...formData,
+        piano: selectedPlan,
       });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
+
+      if (res.ok) {
+        setSuccess(true);
+        setTimeout(() => {
+          setShowModal(false);
+          setSuccess(false);
+          setFormData({ nome: "", email: "", ambulatorio: "", telefono: "", note: "" });
+          setSelectedPlan(null);
+        }, 3000);
+      } else {
+        throw new Error("Errore invio");
       }
-    },
-    onError: () => {
+    } catch (error) {
       toast({
         title: "Errore",
-        description: "Impossibile iniziare il checkout",
+        description: "Impossibile inviare la richiesta. Riprova.",
         variant: "destructive",
       });
-      setLoadingPlan(null);
+    } finally {
+      setLoading(false);
     }
-  });
-
-  const portalMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/stripe/create-portal-session", {
-        ambulatorioId: AMBULATORIO_ID,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Errore",
-        description: "Impossibile aprire il portale di gestione",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const handleUpgrade = async (planName: string, priceId: string) => {
-    setLoadingPlan(planName);
-    checkoutMutation.mutate({ piano: planName, priceId });
   };
 
   if (isLoading) {
     return (
       <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-12 w-1/2" />
           <div className="grid md:grid-cols-3 gap-6">
             <Skeleton className="h-96" />
             <Skeleton className="h-96" />
@@ -149,82 +112,24 @@ export default function BillingPage() {
   }
 
   const currentPlan = subscription?.piano as PlanKey;
-  const isTrial = subscription?.status === "TRIAL";
-  const hasStripeSubscription = !!subscription?.stripeSubscriptionId;
-
-  const getPlanButton = (planKey: keyof typeof PLAN_DETAILS) => {
-    const plan = PLAN_DETAILS[planKey];
-    const isCurrentPlan = currentPlan === planKey;
-
-    if (isCurrentPlan) {
-      return (
-        <Button variant="outline" disabled data-testid={`button-current-${planKey.toLowerCase()}`}>
-          Piano Attuale
-        </Button>
-      );
-    }
-
-    // Tutti i piani ora hanno un prezzo e possono essere cambiati
-    if (hasStripeSubscription) {
-      // Se ha già un abbonamento Stripe, usa il portale per cambiare
-      return (
-        <Button
-          variant={planKey === "PROFESSIONAL" ? "default" : "outline"}
-          onClick={() => portalMutation.mutate()}
-          disabled={portalMutation.isPending}
-          data-testid={`button-change-${planKey.toLowerCase()}`}
-        >
-          {portalMutation.isPending ? "Caricamento..." : "Gestisci su Stripe"}
-        </Button>
-      );
-    }
-
-    if (!plan.priceId) return null;
-
-    return (
-      <Button
-        variant={planKey === "PROFESSIONAL" ? "default" : "outline"}
-        onClick={() => handleUpgrade(plan.name, plan.priceId!)}
-        disabled={loadingPlan === plan.name}
-        data-testid={`button-upgrade-${planKey.toLowerCase()}`}
-      >
-        {loadingPlan === plan.name ? "Caricamento..." : "Passa a " + plan.name}
-      </Button>
-    );
-  };
 
   return (
     <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8" data-testid="page-billing">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Abbonamento e Fatturazione</h1>
-            <p className="text-muted-foreground mt-1">
-              Piano attuale: <strong>{currentPlan}</strong>
-              {isTrial && subscription?.dataFine && (
-                <span className="ml-2 text-warning">
-                  (Trial fino al {format(new Date(subscription.dataFine), "dd MMMM yyyy", { locale: it })})
-                </span>
-              )}
-            </p>
-          </div>
-
-          {hasStripeSubscription && (
-            <Button
-              variant="outline"
-              onClick={() => portalMutation.mutate()}
-              disabled={portalMutation.isPending}
-              data-testid="button-manage-billing"
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              {portalMutation.isPending ? "Caricamento..." : "Gestisci Fatturazione"}
-            </Button>
-          )}
+        <div>
+          <h1 className="text-3xl font-bold">Abbonamento e Prezzi</h1>
+          <p className="text-muted-foreground mt-1">
+            Piano attuale: <strong>{currentPlan}</strong>
+          </p>
         </div>
 
-        {/* Pricing Cards */}
+        <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <AlertDescription className="text-sm">
+            💡 <strong>Smoke Test Attivo:</strong> Stiamo validando i nostri prezzi. Compilando il form riceverai un contatto personalizzato dal nostro team commerciale.
+          </AlertDescription>
+        </Alert>
+
         <div className="grid md:grid-cols-3 gap-6">
           {(Object.keys(PLAN_DETAILS) as Array<keyof typeof PLAN_DETAILS>).map((key) => {
             const plan = PLAN_DETAILS[key];
@@ -234,11 +139,11 @@ export default function BillingPage() {
               <Card
                 key={key}
                 className={`relative ${
-                  key === "PROFESSIONAL" ? "border-primary shadow-lg" : ""
+                  plan.popular ? "border-primary shadow-lg" : ""
                 } ${isCurrentPlan ? "bg-accent/30" : ""}`}
                 data-testid={`card-plan-${key.toLowerCase()}`}
               >
-                {key === "PROFESSIONAL" && (
+                {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                     <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                       <Sparkles className="h-3 w-3" />
@@ -254,11 +159,9 @@ export default function BillingPage() {
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-4">
                     <span className="text-4xl font-bold" data-testid={`text-price-${key.toLowerCase()}`}>
-                      {plan.price === 0 ? "Gratis" : `€${plan.price}`}
+                      €{plan.price}
                     </span>
-                    {plan.price > 0 && (
-                      <span className="text-muted-foreground ml-2">{plan.period}</span>
-                    )}
+                    <span className="text-muted-foreground ml-2">{plan.period}</span>
                   </div>
                 </CardHeader>
 
@@ -274,23 +177,147 @@ export default function BillingPage() {
                 </CardContent>
 
                 <CardFooter>
-                  {getPlanButton(key)}
+                  {isCurrentPlan ? (
+                    <Button variant="outline" disabled data-testid={`button-current-${key.toLowerCase()}`} className="w-full">
+                      Piano Attuale
+                    </Button>
+                  ) : (
+                    <Button
+                      variant={plan.popular ? "default" : "outline"}
+                      onClick={() => handlePlanSelect(key)}
+                      data-testid={`button-request-${key.toLowerCase()}`}
+                      className="w-full"
+                    >
+                      Richiedi Demo Gratuita
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             );
           })}
         </div>
 
-        {/* Info gestione abbonamento */}
-        {hasStripeSubscription && (
-          <Alert>
-            <CreditCard className="h-4 w-4" />
-            <AlertDescription>
-              Puoi gestire il tuo abbonamento, aggiornare i metodi di pagamento e visualizzare le fatture tramite il portale Stripe cliccando su "Gestisci Fatturazione"
-            </AlertDescription>
-          </Alert>
-        )}
+        <div className="text-center pt-8 border-t">
+          <p className="text-sm text-muted-foreground mb-4">
+            ✅ Conforme GDPR • 🏥 FSE 2.0 Ready • 🔒 Server italiani
+          </p>
+          <p className="text-xs text-muted-foreground">
+            💳 Nessuna carta di credito richiesta • 14 giorni di prova gratuita
+          </p>
+        </div>
       </div>
+
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-md">
+          <button
+            onClick={() => setShowModal(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Chiudi</span>
+          </button>
+
+          {success ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-950 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Richiesta Inviata! 🎉</DialogTitle>
+                <DialogDescription className="text-base mt-2">
+                  Ti contatteremo entro 24 ore per organizzare la demo personalizzata del piano {selectedPlan}.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">
+                  Demo Gratuita Piano {selectedPlan && PLAN_DETAILS[selectedPlan].name}
+                </DialogTitle>
+                <DialogDescription>
+                  Compila il form e ti mostreremo come MedicoFlow può trasformare il tuo ambulatorio.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="nome">Nome completo *</Label>
+                  <Input
+                    id="nome"
+                    required
+                    value={formData.nome}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                    placeholder="Dr. Mario Rossi"
+                    data-testid="input-nome"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="mario.rossi@email.it"
+                    data-testid="input-email"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ambulatorio">Nome ambulatorio</Label>
+                  <Input
+                    id="ambulatorio"
+                    value={formData.ambulatorio}
+                    onChange={(e) => setFormData(prev => ({ ...prev, ambulatorio: e.target.value }))}
+                    placeholder="Studio Medico Associato"
+                    data-testid="input-ambulatorio"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="telefono">Telefono</Label>
+                  <Input
+                    id="telefono"
+                    type="tel"
+                    value={formData.telefono}
+                    onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                    placeholder="+39 333 1234567"
+                    data-testid="input-telefono"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="note">Note (opzionale)</Label>
+                  <Textarea
+                    id="note"
+                    value={formData.note}
+                    onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+                    rows={3}
+                    placeholder="Esigenze particolari o domande..."
+                    data-testid="textarea-note"
+                  />
+                </div>
+
+                <Button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full"
+                  data-testid="button-submit-lead"
+                >
+                  {loading ? "Invio in corso..." : "Richiedi Demo Gratuita"}
+                </Button>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Compilando questo form accetti di essere contattato dal nostro team commerciale.
+                </p>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
