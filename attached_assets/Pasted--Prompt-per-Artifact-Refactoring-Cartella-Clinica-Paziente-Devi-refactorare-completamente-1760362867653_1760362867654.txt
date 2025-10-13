@@ -1,0 +1,241 @@
+# 📝 Prompt per Artifact - Refactoring Cartella Clinica Paziente
+
+```
+Devi refactorare completamente la pagina di visualizzazione cartella clinica paziente per MedicoFlow, risolvendo problemi critici di UI/UX.
+
+## CONTESTO ATTUALE
+
+La pagina mostra le visite di un paziente ma ha gravi problemi:
+1. Dropdown paziente nasconde informazioni critiche
+2. Card visite troppo minimali (solo data + diagnosi)
+3. Mancano alert medici sempre visibili (allergie, patologie croniche)
+4. Nessun breadcrumb navigation
+5. Validazione form permette salvataggio con "diagnosi: niente"
+6. Info paziente (età, telefono, ultima visita) non visibili
+
+## OBIETTIVO
+
+Creare una pagina ottimizzata per uso clinico reale dove il medico vede IMMEDIATAMENTE:
+- Header paziente fisso con dati essenziali (nome, CF, età, telefono)
+- Alert box rosso se ci sono allergie/patologie critiche
+- Card visite espanse con preview di diagnosi, terapia, anamnesi
+- Quick actions facilmente accessibili
+- Breadcrumb per tornare a lista pazienti
+
+## STRUTTURA FILE DA CREARE
+
+Crea un artifact con il file completo:
+`app/dashboard/pazienti/[id]/page.tsx`
+
+## REQUISITI TECNICI
+
+### 1. DATA STRUCTURE
+Il paziente ha questa struttura:
+```typescript
+interface Paziente {
+  id: string
+  nome: string
+  cognome: string
+  codiceFiscale: string
+  dataNascita: Date
+  telefono: string
+  email?: string
+  alerts?: string[]  // Es: ["Allergia penicillina", "Diabete tipo 2"]
+  visite: Visita[]
+}
+
+interface Visita {
+  id: string
+  dataVisita: Date
+  tipo: string  // "controllo", "prima-visita", "urgente"
+  stato: string  // "completato", "programmato"
+  durata: number  // minuti
+  diagnosi?: string
+  terapia?: string
+  anamnesi?: string
+  esameObiettivo?: string
+  notePrivate?: string
+  medicoId: string
+  medicoNome?: string  // "Dr. Elena Rossi"
+}
+```
+
+### 2. LAYOUT RICHIESTO
+
+```
+┌─────────────────────────────────────────────────────┐
+│ ← Pazienti  >  Moretti Matteo                       │
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│  [HEADER PAZIENTE FISSO]                            │
+│  - Nome completo + CF grande e leggibile            │
+│  - Età (calcolata da dataNascita)                   │
+│  - Telefono cliccabile (tel: link)                  │
+│  - Email cliccabile (mailto: link)                  │
+│  - Stats: "12 visite totali • Ultima: 45 gg fa"    │
+│  - Button "Nuova Visita" a destra                   │
+│                                                      │
+│  [ALERT BOX - solo se alerts array non vuoto]       │
+│  - Sfondo rosso chiaro, bordo sinistro rosso        │
+│  - Icona warning                                    │
+│  - Lista bullet alerts                              │
+│                                                      │
+├─────────────────────────────────────────────────────┤
+│                                                      │
+│  STORICO CLINICO (X visite)          [Filtra ▼]    │
+│                                                      │
+│  ┌─────────────────────────────────────────────┐   │
+│  │ [CARD VISITA ESPANSA]                        │   │
+│  │                                               │   │
+│  │ Header:                                       │   │
+│  │ - Data grande (13 ottobre 2025)              │   │
+│  │ - Tipo + medico small (controllo • Dr. X)    │   │
+│  │ - Actions: Edit (icona + label) Delete       │   │
+│  │                                               │   │
+│  │ Body (3 sezioni con preview):                 │   │
+│  │                                               │   │
+│  │ 🩺 DIAGNOSI (box blu highlight)               │   │
+│  │ Testo diagnosi completo                       │   │
+│  │                                               │   │
+│  │ 💊 TERAPIA                                    │   │
+│  │ Preview 2 righe terapia (line-clamp-2)       │   │
+│  │                                               │   │
+│  │ 📝 ANAMNESI                                   │   │
+│  │ Preview 2 righe anamnesi (line-clamp-2)      │   │
+│  │                                               │   │
+│  │ Footer:                                       │   │
+│  │ - Durata: 30 min | ✓ Completata              │   │
+│  │ - Link "→ Vedi cartella completa"            │   │
+│  └─────────────────────────────────────────────┘   │
+│                                                      │
+│  [Altre visite collapsed...]                        │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+### 3. COMPONENTI DA USARE
+
+- `lucide-react` icons: ArrowLeft, ChevronRight, AlertTriangle, Calendar, Phone, Mail, User, Stethoscope, Pill, FileText, Edit2, Trash2, Plus
+- `date-fns`: format, formatDistance, differenceInYears
+- `Link` da next/link per navigation
+- Tailwind CSS per styling
+
+### 4. FEATURES SPECIFICHE
+
+#### A. Calcolo Età Automatico
+```typescript
+const età = differenceInYears(new Date(), new Date(paziente.dataNascita))
+```
+
+#### B. "Ultima visita X giorni fa"
+```typescript
+const ultimaVisita = visite[0] // array già ordinato desc
+const giorniDaUltimaVisita = formatDistance(
+  new Date(ultimaVisita.dataVisita),
+  new Date(),
+  { addSuffix: true, locale: it }
+)
+```
+
+#### C. Alert Box Condizionale
+Mostra SOLO se `paziente.alerts && paziente.alerts.length > 0`
+
+#### D. Links Funzionali
+- Telefono: `<a href="tel:+39333...">`
+- Email: `<a href="mailto:email@...">`
+- Breadcrumb: `<Link href="/dashboard/pazienti">`
+- Nuova visita: `<Link href="/dashboard/cartella-clinica/nuovo?pazienteId={id}">`
+
+#### E. Card Visite
+- Ordinate per data DESC (più recenti prima)
+- Preview testo con `line-clamp-2` Tailwind
+- Link "Vedi cartella completa" → `/dashboard/cartella-clinica/{visitaId}`
+
+### 5. COLORI E STYLING
+
+- Alert box: `bg-red-50 border-l-4 border-red-500 text-red-900`
+- Diagnosi box: `bg-blue-50 border-l-4 border-blue-600`
+- Card visite: `bg-white border border-gray-200 rounded-lg hover:shadow-md`
+- Headers: `text-gray-900 font-bold text-2xl`
+- Labels sezioni: `text-xs font-semibold text-gray-600 uppercase`
+- Actions: `text-blue-600 hover:bg-blue-50` (edit), `text-red-600 hover:bg-red-50` (delete)
+
+### 6. RESPONSIVE
+
+- Mobile: stack tutto verticalmente
+- Desktop: layout a colonne dove appropriato
+- Header paziente: sempre single column per leggibilità
+
+### 7. DATA FETCHING
+
+Simula fetch con:
+```typescript
+async function getPaziente(id: string) {
+  // Mock data per ora
+  return {
+    id,
+    nome: 'Matteo',
+    cognome: 'Moretti',
+    codiceFiscale: 'MRTMTT16T03A944U',
+    dataNascita: new Date('1977-03-16'),
+    telefono: '+39 333 1234567',
+    email: 'matteo.moretti@email.it',
+    alerts: ['Allergia penicillina', 'Diabete tipo 2'],
+    visite: [
+      {
+        id: 'v1',
+        dataVisita: new Date('2025-10-13'),
+        tipo: 'controllo',
+        stato: 'completato',
+        durata: 30,
+        diagnosi: 'Diabete mellito tipo 2 controllato (E11.9)',
+        terapia: 'Metformina 850mg 2x/die. Controllo glicemia pre-prandiale. Dieta ipocalorica 1800 kcal/die.',
+        anamnesi: 'Paziente riferisce controllo routinario. Aderenza terapeutica buona. Glicemia domiciliare media 120 mg/dl. Nessun episodio ipoglicemico.',
+        esameObiettivo: 'PA 130/80 mmHg. Peso 82kg (BMI 28). Piedi integri, no lesioni.',
+        medicoNome: 'Dr. Elena Rossi'
+      },
+      {
+        id: 'v2',
+        dataVisita: new Date('2025-08-28'),
+        tipo: 'prima-visita',
+        stato: 'completato',
+        durata: 60,
+        diagnosi: 'Diabete mellito tipo 2 (E11) - prima diagnosi',
+        terapia: 'Avviata metformina 850mg 1x/die per 2 settimane, poi 2x/die. Educazione alimentare. Controllo tra 3 mesi.',
+        anamnesi: 'Paziente inviato da MMG per iperglicemia (glicemia 180 mg/dl). Familiarità positiva per diabete (padre). Stile di vita sedentario.',
+        medicoNome: 'Dr. Elena Rossi'
+      }
+    ]
+  }
+}
+```
+
+In produzione questo sarà:
+```typescript
+const res = await fetch(`/api/pazienti/${id}`)
+const paziente = await res.json()
+```
+
+## OUTPUT ATTESO
+
+Crea l'artifact con:
+1. File TypeScript completo
+2. Tutti gli import necessari
+3. Component asincrono con data fetching
+4. Layout come specificato sopra
+5. Styling Tailwind professionale
+6. Comments dove necessario per chiarezza
+
+## VINCOLI
+
+- ❌ NO dropdown selezione paziente
+- ❌ NO card minimali (diagnosi sola)
+- ❌ NO pagina senza breadcrumb
+- ✅ SÌ header fisso sempre visibile
+- ✅ SÌ alert medici prominenti
+- ✅ SÌ preview multi-sezione visite
+- ✅ SÌ links funzionali (tel, email)
+- ✅ SÌ età calcolata automaticamente
+
+Crea l'artifact ora.
+```
