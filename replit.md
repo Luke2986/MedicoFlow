@@ -125,3 +125,30 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
 - **Testing**: E2E test passed ✅ - verified pagination (26 patients → 2 pages: 20+6), badge display, CSV download with proper headers
 - **Performance Note**: For large datasets, consider optimizing per-patient visit lookups (potential N+1 queries)
 - **Files Modified**: `server/routes.ts`, `client/src/pages/dashboard/pazienti.tsx`
+
+### PDF Export for Medical Records (Latest - Oct 14, 2025)
+- **Feature**: Professional PDF export for individual medical visits (Cartella Clinica) with full clinical data, watermark, and digital signature
+- **Implementation**:
+  - **PDF Component**: Created `CartellaClinicaPDF` using @react-pdf/renderer with professional medical layout
+    - **Header**: Ambulatorio details (nome, indirizzo, telefono, P.IVA, specializzazione)
+    - **Patient Info**: Nome, cognome, codice fiscale, data nascita, data visita, motivo
+    - **Clinical Sections**: Diagnosi (highlighted), Anamnesi, Esame Obiettivo, Parametri Vitali, Terapia, Prescrizioni, Esami, Note Cliniche
+    - **Watermark**: "COPIA CONFORME" rotated 45° with low opacity
+    - **Footer**: Doctor signature, generation timestamp, visit ID
+    - **Styling**: Professional blue color scheme (#2563eb) with proper spacing and hierarchy
+  - **Backend Route**: `GET /api/visite/:id/pdf` generates PDF with proper headers
+    - Content-Type: application/pdf
+    - Content-Disposition: attachment; filename="Cartella_{cognome}_{nome}_{date}.pdf"
+    - Loads visita, paziente, ambulatorio, medico data and streams PDF response
+  - **Frontend UI**: Download PDF button in cartella clinica page (between Modifica and Elimina buttons)
+    - Button opens PDF in new tab for download
+    - data-testid: `button-download-pdf-{visitaId}`
+  - **Type Safety**: Strongly typed props (Visita, Paziente, Ambulatorio) instead of `any`
+  - **Defensive Programming**: `safeFormatDate()` helper for robust date parsing with fallbacks
+- **Bug Fixes**:
+  - Fixed `pazienti.find is not a function` - cartella-clinica.tsx now handles paginated API response `{ pazienti: [...], pagination: {...} }`
+  - Fixed `React is not defined` - added explicit `import React from 'react'` for server-side PDF rendering
+- **Testing**: E2E test passed ✅ - verified PDF download (4057 bytes), correct headers, download trigger for patient Marco Bianchi (3 visite)
+- **Files Created**: `client/src/lib/pdf/cartella-pdf.tsx`
+- **Files Modified**: `server/routes.ts`, `client/src/pages/dashboard/cartella-clinica.tsx`
+- **Dependencies Added**: `@react-pdf/renderer`, `qrcode`, `@types/qrcode`

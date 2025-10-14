@@ -2,6 +2,7 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import type { Visita, Paziente, Ambulatorio } from '@shared/schema';
 
 // Registra font Inter (opzionale)
 Font.register({
@@ -137,10 +138,22 @@ const styles = StyleSheet.create({
 });
 
 interface CartellaClinicaPDFProps {
-  visita: any;
-  paziente: any;
-  ambulatorio: any;
+  visita: Visita;
+  paziente: Paziente;
+  ambulatorio: Ambulatorio;
   medicoNome: string;
+}
+
+// Helper function per formattare date in modo sicuro
+function safeFormatDate(date: string | Date | null | undefined, formatStr: string, options?: any): string {
+  try {
+    if (!date) return 'Data non disponibile';
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) return 'Data non valida';
+    return format(parsedDate, formatStr, options);
+  } catch (error) {
+    return 'Errore formato data';
+  }
 }
 
 export default function CartellaClinicaPDF({ 
@@ -194,13 +207,13 @@ export default function CartellaClinicaPDF({
           <View style={styles.patientRow}>
             <Text style={styles.patientLabel}>Data di Nascita:</Text>
             <Text style={styles.patientValue}>
-              {format(new Date(paziente.dataNascita), 'dd/MM/yyyy')}
+              {safeFormatDate(paziente.dataNascita, 'dd/MM/yyyy')}
             </Text>
           </View>
           <View style={styles.patientRow}>
             <Text style={styles.patientLabel}>Data Visita:</Text>
             <Text style={styles.patientValue}>
-              {format(new Date(visita.dataVisita), 'dd MMMM yyyy', { locale: it })}
+              {safeFormatDate(visita.dataVisita, 'dd MMMM yyyy', { locale: it })}
             </Text>
           </View>
           <View style={styles.patientRow}>
