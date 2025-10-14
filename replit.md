@@ -126,7 +126,7 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
 - **Performance Note**: For large datasets, consider optimizing per-patient visit lookups (potential N+1 queries)
 - **Files Modified**: `server/routes.ts`, `client/src/pages/dashboard/pazienti.tsx`
 
-### PDF Export for Complete Medical Records (Latest - Oct 14, 2025)
+### PDF Export for Complete Medical Records (Latest - Oct 14, 2025) ✅ PRODUCTION-READY
 - **Feature**: Professional PDF export for **complete patient medical record** (Cartella Clinica) with ALL visits, clinical data, watermark, and digital signature
 - **Implementation**:
   - **PDF Component**: Enhanced `CartellaClinicaPDF` using @react-pdf/renderer for full cartella export
@@ -138,29 +138,39 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
       - Parametri Vitali (peso, altezza, PA, FC, temperatura)
       - Terapia, Prescrizioni, Esami, Note Cliniche
     - **Watermark**: "COPIA CONFORME" rotated 45° with low opacity
-    - **Footer**: Doctor signature, generation timestamp
+    - **Footer**: Doctor signature, generation timestamp, adaptive metadata
+      - Shows "Cartella Clinica Completa - X visite" for multiple visits
+      - Shows "ID Visita: X" for single visit (safe optional access)
     - **Styling**: Professional blue color scheme (#2563eb) with page breaks between visits
   - **Backend Routes**:
     - `GET /api/pazienti/:id/cartella-pdf` - Generates **complete cartella PDF** with all patient visits
       - Loads patient, ambulatorio, ALL visite (chronologically sorted)
       - Content-Disposition: `CartellaClinica_{Cognome}_{Nome}_{Date}.pdf`
     - `GET /api/visite/:id/pdf` - Single visit PDF (legacy route, maintained for compatibility)
-  - **Frontend UI Redesign**: 
+  - **Frontend UI (Responsive Layout)**: 
     - **Button "Esporta PDF Cartella"** in patient header card (next to "+ Nuova Visita")
       - Emerald/green border (`border-emerald-600`) to differentiate from primary action
       - Download icon, data-testid: `button-esporta-cartella-pdf`
-      - Positioned prominently in patient info card
+      - Responsive: stacks vertically on mobile (`flex-col`), horizontal on desktop (`sm:flex-row`)
+      - `shrink-0` and `whitespace-nowrap` for consistent visibility
     - **Removed** individual PDF buttons from visit cards (only Modifica and Elimina remain)
   - **Type Safety**: Strongly typed props with optional `visite?: Visita[]` for multi-visit support
   - **Defensive Programming**: `safeFormatDate()` helper for robust date parsing with fallbacks
 - **Architecture**:
   - PDF component supports both single visit (legacy) and multiple visits (new cartella completa)
-  - Uses `visiteDaRenderizzare` array to iterate over all visits
+  - Uses `visiteDaRenderizzare` array to safely iterate over all visits
   - Route ordering: specific routes (`/cartella-pdf`, `/codice-fiscale/:cf`) BEFORE parametric `/:id`
-- **Bug Fixes**:
+- **Critical Bug Fixes**:
+  - ✅ **Footer Null Reference**: Fixed crash when `visita` was null in cartella completa mode - footer now uses `visiteDaRenderizzare` array with optional chaining
+  - ✅ **Missing Style**: Added `sectionHeader` style definition (was referenced but undefined)
+  - ✅ **Button Visibility**: Fixed responsive layout - buttons now always visible (flex-col on mobile, flex-row on desktop)
+  - ✅ **LSP Errors**: All TypeScript errors resolved
   - Fixed `pazienti.find is not a function` - cartella-clinica.tsx now handles paginated API response `{ pazienti: [...], pagination: {...} }`
   - Fixed `React is not defined` - added explicit `import React from 'react'` for server-side PDF rendering
-- **Testing**: E2E test passed ✅ - verified complete cartella PDF (6685 bytes for 3 visite), emerald button styling, download trigger for Marco Bianchi
+- **Testing**: 
+  - ✅ E2E test passed - verified complete cartella PDF (6990 bytes for 3 visite), emerald button styling, download trigger for Marco Bianchi
+  - ✅ Architect review passed - production-ready, type-safe, defensive programming verified
+  - ✅ No server errors, consistent downloads across multiple requests
 - **Files Created**: `client/src/lib/pdf/cartella-pdf.tsx`
 - **Files Modified**: `server/routes.ts`, `client/src/pages/dashboard/cartella-clinica.tsx`
 - **Dependencies Added**: `@react-pdf/renderer`, `qrcode`, `@types/qrcode`

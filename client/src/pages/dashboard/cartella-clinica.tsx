@@ -282,84 +282,86 @@ export default function CartellaClinica() {
       {selectedPaziente && pazienteSelezionato && (
         <Card className="bg-card border-border" data-testid="card-header-paziente">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-primary/10 rounded-full">
-                    <User className="w-8 h-8 text-primary" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-foreground">
-                      {pazienteSelezionato.cognome} {pazienteSelezionato.nome}
-                    </h1>
-                    <p className="text-muted-foreground font-mono text-sm mt-1">
-                      CF: {pazienteSelezionato.codiceFiscale}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="flex items-center gap-2 text-foreground">
-                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {eta} anni ({format(new Date(pazienteSelezionato.dataNascita), "d/MM/yyyy")})
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <a 
-                      href={`tel:${pazienteSelezionato.telefono}`}
-                      className="text-sm text-primary hover:underline"
-                      data-testid="link-telefono"
-                    >
-                      {pazienteSelezionato.telefono}
-                    </a>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-primary/10 rounded-full">
+                      <User className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-bold text-foreground">
+                        {pazienteSelezionato.cognome} {pazienteSelezionato.nome}
+                      </h1>
+                      <p className="text-muted-foreground font-mono text-sm mt-1">
+                        CF: {pazienteSelezionato.codiceFiscale}
+                      </p>
+                    </div>
                   </div>
 
-                  {pazienteSelezionato.email && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex items-center gap-2 text-foreground">
+                      <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {eta} anni ({format(new Date(pazienteSelezionato.dataNascita), "d/MM/yyyy")})
+                      </span>
+                    </div>
+                    
                     <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <Phone className="w-4 h-4 text-muted-foreground" />
                       <a 
-                        href={`mailto:${pazienteSelezionato.email}`}
+                        href={`tel:${pazienteSelezionato.telefono}`}
                         className="text-sm text-primary hover:underline"
-                        data-testid="link-email"
+                        data-testid="link-telefono"
                       >
-                        {pazienteSelezionato.email}
+                        {pazienteSelezionato.telefono}
                       </a>
                     </div>
-                  )}
 
-                  <div className="flex items-center gap-2 text-foreground">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {visite.length} visite{giorniDaUltimaVisita && ` • ${giorniDaUltimaVisita}`}
-                    </span>
+                    {pazienteSelezionato.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <a 
+                          href={`mailto:${pazienteSelezionato.email}`}
+                          className="text-sm text-primary hover:underline"
+                          data-testid="link-email"
+                        >
+                          {pazienteSelezionato.email}
+                        </a>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-foreground">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {visite.length} visite{giorniDaUltimaVisita && ` • ${giorniDaUltimaVisita}`}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    // Genera PDF dell'intera cartella clinica del paziente
-                    window.open(`/api/pazienti/${selectedPaziente}/cartella-pdf`, '_blank');
-                  }}
-                  data-testid="button-esporta-cartella-pdf"
-                  className="gap-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                >
-                  <Download className="w-5 h-5" />
-                  Esporta PDF Cartella
-                </Button>
-                <Button 
-                  onClick={() => setDialogOpen(true)}
-                  data-testid="button-nuova-visita"
-                  className="gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Nuova Visita
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 shrink-0">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      // Genera PDF dell'intera cartella clinica del paziente
+                      window.open(`/api/pazienti/${selectedPaziente}/cartella-pdf`, '_blank');
+                    }}
+                    data-testid="button-esporta-cartella-pdf"
+                    className="gap-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30 whitespace-nowrap"
+                  >
+                    <Download className="w-5 h-5" />
+                    Esporta PDF Cartella
+                  </Button>
+                  <Button 
+                    onClick={() => setDialogOpen(true)}
+                    data-testid="button-nuova-visita"
+                    className="gap-2 whitespace-nowrap"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Nuova Visita
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>

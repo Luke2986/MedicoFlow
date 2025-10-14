@@ -64,6 +64,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20
   },
+  sectionHeader: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderRadius: 4
+  },
   sectionTitle: {
     fontSize: 13,
     fontWeight: 'bold',
@@ -333,7 +340,10 @@ export default function CartellaClinicaPDF({
                 Documento generato il {format(new Date(), 'dd/MM/yyyy HH:mm')}
               </Text>
               <Text style={styles.metadata}>
-                ID Visita: {visita.id}
+                {visiteDaRenderizzare.length > 1 
+                  ? `Cartella Clinica Completa - ${visiteDaRenderizzare.length} visite` 
+                  : `ID Visita: ${visiteDaRenderizzare[0]?.id || 'N/A'}`
+                }
               </Text>
             </View>
             <View style={styles.signature}>
