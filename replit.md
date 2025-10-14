@@ -51,7 +51,25 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
 
 ## Recent Updates (October 14, 2025)
 
-### Interactive Plan Switching UI (Latest - Oct 14, 2025)
+### Onboarding System Implementation (Latest - Oct 14, 2025)
+- **Feature**: Complete intelligent onboarding wizard for first-time users with auto-progress tracking
+- **Implementation**:
+  - **Database**: Added `onboarding_progress` table with tracking fields (profileCompleted, firstPatientAdded, firstAppointmentAdded, themeCustomized, onboardingCompleted)
+  - **Backend API**: 
+    - GET `/api/onboarding`: Auto-updates progress based on real data (patient count, appointment count, theme settings)
+    - POST `/api/onboarding`: Manual step completion
+    - Logic auto-detects completion: if pazienti count > 0 → firstPatientAdded=TRUE
+  - **React Components**:
+    - **OnboardingWizard**: 4-step interactive wizard with progress bar (0-100%), dismissible with localStorage persistence
+    - **EmptyState**: Reusable component for empty lists with CTA buttons
+    - **QuickActions**: Context-aware action suggestions (prioritizes missing steps)
+  - **Dashboard Integration**: Wizard appears on first login, auto-updates without reload via TanStack Query invalidation
+  - **Cache Fix**: Added `queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] })` after patient/appointment mutations for real-time progress updates
+- **Testing**: E2E test passed ✅ - verified wizard display, step completion, auto-progress update (3/4→4/4), dismiss persistence
+- **Files Created**: `client/src/components/EmptyState.tsx`, `OnboardingWizard.tsx`, `QuickActions.tsx`
+- **Files Modified**: `shared/schema.ts`, `server/routes.ts`, `client/src/pages/dashboard/index.tsx`, `pazienti.tsx`, `appuntamenti.tsx`
+
+### Interactive Plan Switching UI (Oct 14, 2025)
 - **Feature**: Added interactive Tabs for plan comparison in billing page
 - **Implementation**: 
   - Tabs component (BASE, PROFESSIONAL, ENTERPRISE) for dynamic plan switching
