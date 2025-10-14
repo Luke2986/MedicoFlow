@@ -1,10 +1,10 @@
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import Color from 'color';
 import { promises as dns } from 'dns';
 import * as ipaddr from 'ipaddr.js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
 });
 
 export interface ColorPalette {
@@ -182,9 +182,9 @@ export async function extractColorsFromUrl(url: string): Promise<ColorPalette> {
       // 2. Estrai sezione rilevante (primi 50KB per performance)
       const htmlSnippet = html.substring(0, 50000);
 
-      // 3. Usa OpenAI per analizzare ed estrarre colori
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      // 3. Usa Groq (Llama 3.1) per analizzare ed estrarre colori
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.1-70b-versatile',
         messages: [
           {
             role: 'user',
@@ -222,7 +222,7 @@ IMPORTANTE:
 
       const content = completion.choices[0]?.message?.content;
       if (!content) {
-        throw new Error('No response from OpenAI');
+        throw new Error('No response from Groq');
       }
 
       // 4. Parse risposta JSON
@@ -272,12 +272,12 @@ IMPORTANTE:
     
     // Check if it's a rate limit error
     if (error.status === 429 || error.code === 'rate_limit_exceeded') {
-      throw new Error('Limite API OpenAI raggiunto. Riprova tra qualche ora oppure inserisci i colori manualmente usando i selettori colore sotto.');
+      throw new Error('Limite API Groq raggiunto. Riprova tra qualche ora oppure inserisci i colori manualmente usando i selettori colore sotto.');
     }
     
-    // Check if OpenAI API key is missing
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('API key OpenAI non configurata. Usa i selettori colore manuali sotto per personalizzare il tema.');
+    // Check if Groq API key is missing
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('API key Groq non configurata. Usa i selettori colore manuali sotto per personalizzare il tema.');
     }
     
     throw new Error('Impossibile estrarre i colori dal sito. Verifica che l\'URL sia corretto e accessibile.');
