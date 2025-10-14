@@ -33,7 +33,7 @@ interface ThemeSettings {
 }
 
 export default function ImpostazioniAspetto() {
-  const { palette, reloadTheme } = useTheme();
+  const { palette, reloadTheme, applyPalette } = useTheme();
   const { ambulatorioId } = useAmbulatorio();
   const { toast } = useToast();
   
@@ -186,6 +186,9 @@ export default function ImpostazioniAspetto() {
     setError('');
 
     try {
+      // Apply theme IMMEDIATELY for instant visual feedback
+      applyPalette(previewPalette);
+
       const res = await fetch('/api/theme', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -207,6 +210,7 @@ export default function ImpostazioniAspetto() {
         throw new Error('Errore durante il salvataggio');
       }
 
+      // Reload from server to sync state (optional, for confirmation)
       await reloadTheme();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -217,6 +221,8 @@ export default function ImpostazioniAspetto() {
       });
     } catch (err: any) {
       setError(err.message);
+      // On error, reload original theme
+      await reloadTheme();
     } finally {
       setLoading(false);
     }
@@ -229,6 +235,22 @@ export default function ImpostazioniAspetto() {
     setError('');
 
     try {
+      const defaultColors = {
+        primary: '#2563eb',
+        primaryLight: '#3b82f6',
+        primaryDark: '#1e40af',
+        accent: '#10b981',
+        success: '#22c55e',
+        warning: '#f59e0b',
+        error: '#ef4444'
+      };
+
+      // Apply default theme IMMEDIATELY
+      applyPalette(defaultColors);
+      setPreviewPalette(defaultColors);
+      setSourceType('default');
+      setSiteUrl('');
+
       const res = await fetch(`/api/theme?ambulatorioId=${ambulatorioId}`, {
         method: 'DELETE'
       });
@@ -238,17 +260,6 @@ export default function ImpostazioniAspetto() {
       }
 
       await reloadTheme();
-      setPreviewPalette({
-        primary: '#2563eb',
-        primaryLight: '#3b82f6',
-        primaryDark: '#1e40af',
-        accent: '#10b981',
-        success: '#22c55e',
-        warning: '#f59e0b',
-        error: '#ef4444'
-      });
-      setSourceType('default');
-      setSiteUrl('');
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       
@@ -258,6 +269,8 @@ export default function ImpostazioniAspetto() {
       });
     } catch (err: any) {
       setError(err.message);
+      // On error, reload original theme
+      await reloadTheme();
     } finally {
       setLoading(false);
     }

@@ -16,6 +16,7 @@ interface ColorPalette {
 interface ThemeContextType {
   palette: ColorPalette;
   reloadTheme: () => Promise<void>;
+  applyPalette: (colors: ColorPalette) => void;
   isLoading: boolean;
 }
 
@@ -64,13 +65,69 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return `${h} ${s}% ${l}%`;
   };
 
+  // Calculate relative luminance for WCAG contrast formula
+  const getLuminance = (r: number, g: number, b: number): number => {
+    // Convert RGB to linear values
+    const toLinear = (val: number) => {
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    };
+    
+    const rLinear = toLinear(r);
+    const gLinear = toLinear(g);
+    const bLinear = toLinear(b);
+    
+    // WCAG luminance formula
+    return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+  };
+
+  // Calculate WCAG contrast ratio between two colors
+  const getContrastRatio = (lum1: number, lum2: number): number => {
+    const lighter = Math.max(lum1, lum2);
+    const darker = Math.min(lum1, lum2);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+
+  // Get foreground color that meets WCAG AA (4.5:1 minimum)
+  const getForegroundColor = (hexColor: string): string => {
+    // Convert hex to RGB
+    const r = parseInt(hexColor.slice(1, 3), 16) / 255;
+    const g = parseInt(hexColor.slice(3, 5), 16) / 255;
+    const b = parseInt(hexColor.slice(5, 7), 16) / 255;
+    
+    const bgLuminance = getLuminance(r, g, b);
+    
+    // White and black luminance values
+    const whiteLuminance = 1.0;
+    const blackLuminance = 0.0;
+    
+    // Calculate contrast with white and black
+    const contrastWithWhite = getContrastRatio(bgLuminance, whiteLuminance);
+    const contrastWithBlack = getContrastRatio(bgLuminance, blackLuminance);
+    
+    // Choose white or black based on which gives better contrast
+    // Prefer white if both meet WCAG AA (4.5:1), otherwise choose the better one
+    if (contrastWithWhite >= 4.5) {
+      return '0 0% 100%'; // White
+    } else if (contrastWithBlack >= 4.5) {
+      return '0 0% 10%'; // Near black
+    } else {
+      // Neither meets 4.5:1, choose the better one (should rarely happen with proper colors)
+      return contrastWithWhite > contrastWithBlack ? '0 0% 100%' : '0 0% 10%';
+    }
+  };
+
   const applyTheme = (colors: ColorPalette) => {
     const root = document.documentElement;
     
     // Convert hex to HSL and apply shadcn CSS variables
     root.style.setProperty('--primary', hexToHSL(colors.primary));
+    root.style.setProperty('--primary-foreground', getForegroundColor(colors.primary));
+    
     root.style.setProperty('--accent', hexToHSL(colors.accent));
+    root.style.setProperty('--accent-foreground', getForegroundColor(colors.accent));
+    
     root.style.setProperty('--destructive', hexToHSL(colors.error));
+    root.style.setProperty('--destructive-foreground', getForegroundColor(colors.error));
     
     // DON'T override sidebar colors - they have built-in contrast
     // The sidebar uses its own color system to ensure accessibility
@@ -112,7 +169,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [ambulatorioId]);
 
   return (
-    <ThemeContext.Provider value={{ palette, reloadTheme: loadTheme, isLoading }}>
+    <ThemeContext.Provider value={{ 
+      palette, 
+      reloadTheme: loadTheme, 
+      applyPalette: applyTheme,
+      isLoading 
+    }}>
       {children}
     </ThemeContext.Provider>
   );
