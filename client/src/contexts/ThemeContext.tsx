@@ -72,14 +72,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--accent', hexToHSL(colors.accent));
     root.style.setProperty('--destructive', hexToHSL(colors.error));
     
-    // Update sidebar colors to match primary
-    root.style.setProperty('--sidebar-primary', hexToHSL(colors.primary));
-    root.style.setProperty('--sidebar-accent', hexToHSL(colors.accent));
+    // DON'T override sidebar colors - they have built-in contrast
+    // The sidebar uses its own color system to ensure accessibility
+    // --sidebar-primary and --sidebar-accent are kept at default values
     
-    // Update ring color (focus outlines)
+    // Update ring color (focus outlines) - keep primary for consistency
     root.style.setProperty('--ring', hexToHSL(colors.primary));
     
-    // Update chart colors
+    // Update chart colors for data visualization
     root.style.setProperty('--chart-1', hexToHSL(colors.primary));
     root.style.setProperty('--chart-2', hexToHSL(colors.success));
     root.style.setProperty('--chart-3', hexToHSL(colors.warning));
