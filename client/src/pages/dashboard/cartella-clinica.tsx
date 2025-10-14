@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill, Copy } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill, Copy, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
@@ -440,6 +440,18 @@ export default function CartellaClinica() {
                         >
                           <Pencil className="w-4 h-4" />
                           Modifica
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            window.open(`/api/visite/${visita.id}/pdf`, '_blank');
+                          }}
+                          data-testid={`button-download-pdf-${visita.id}`}
+                          className="gap-1"
+                        >
+                          <Download className="w-4 h-4" />
+                          PDF
                         </Button>
                         <Button
                           variant="ghost"
