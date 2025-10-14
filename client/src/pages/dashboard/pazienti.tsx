@@ -184,6 +184,7 @@ export default function Pazienti() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pazienti"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
       setDialogOpen(false);
       toast({
         title: "Paziente aggiunto",

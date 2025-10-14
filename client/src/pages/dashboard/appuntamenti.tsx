@@ -76,6 +76,7 @@ export default function Appuntamenti() {
 
       queryClient.invalidateQueries({ queryKey: ["/api/appuntamenti"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
       setModalOpen(false);
       setSelectedAppuntamento(null);
       setSelectedSlot(null);
@@ -101,6 +102,7 @@ export default function Appuntamenti() {
       await apiRequest("DELETE", `/api/appuntamenti/${id}`, undefined);
       queryClient.invalidateQueries({ queryKey: ["/api/appuntamenti"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
       setModalOpen(false);
       setSelectedAppuntamento(null);
       
