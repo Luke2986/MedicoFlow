@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import Color from 'color';
+import { promises as dns } from 'dns';
+import * as ipaddr from 'ipaddr.js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -15,36 +17,177 @@ export interface ColorPalette {
   error: string;
 }
 
+function isPrivateOrReservedIp(ipString: string): boolean {
+  try {
+    // Parse and normalize IP using ipaddr.js
+    const addr = ipaddr.process(ipString);
+    
+    // Check if it's a private/reserved range
+    const range = addr.range();
+    
+    // Block all private and reserved ranges
+    const blockedRanges = [
+      'private',        // RFC1918 private addresses
+      'loopback',       // Loopback addresses
+      'linkLocal',      // Link-local addresses (169.254.x.x, fe80::/10)
+      'broadcast',      // Broadcast addresses
+      'reserved',       // Reserved addresses
+      'carrierGradeNat',// Carrier-grade NAT (100.64.0.0/10)
+      'uniqueLocal',    // IPv6 ULA (fc00::/7)
+      'unspecified',    // 0.0.0.0 or ::
+      'multicast',      // Multicast addresses
+    ];
+    
+    if (blockedRanges.includes(range)) {
+      return true;
+    }
+    
+    // Additional check for IPv4-mapped IPv6 addresses
+    if (addr.kind() === 'ipv6') {
+      if (addr.isIPv4MappedAddress()) {
+        const ipv4 = addr.toIPv4Address();
+        return isPrivateOrReservedIp(ipv4.toString());
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    // If parsing fails, it's not a valid IP
+    return false;
+  }
+}
+
+async function validateUrl(urlString: string): Promise<void> {
+  let parsedUrl: URL;
+  
+  try {
+    parsedUrl = new URL(urlString);
+  } catch {
+    throw new Error('URL non valido');
+  }
+
+  // Allow only http and https
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw new Error('Solo protocolli HTTP/HTTPS sono permessi');
+  }
+
+  const hostname = parsedUrl.hostname.toLowerCase();
+  
+  // Block localhost and loopback addresses (literal check)
+  const blockedHosts = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '::1',
+    '.local',
+    'metadata.google.internal',
+    'metadata',
+    'instance-data'
+  ];
+
+  if (blockedHosts.some(blocked => hostname.includes(blocked))) {
+    throw new Error('Non è possibile accedere a indirizzi locali o metadata services');
+  }
+
+  // Check if hostname is already an IP and validate it
+  try {
+    ipaddr.process(hostname);
+    // If we get here, it's a valid IP - check if it's private
+    if (isPrivateOrReservedIp(hostname)) {
+      throw new Error('Non è possibile accedere a reti private o riservate');
+    }
+  } catch {
+    // Not a valid IP, continue with domain validation
+  }
+
+  // Require public domain names (at least one dot and valid TLD)
+  if (!hostname.includes('.') || hostname.endsWith('.')) {
+    throw new Error('L\'URL deve essere un dominio pubblico valido');
+  }
+
+  // Resolve DNS to check if it points to private IPs
+  try {
+    const addresses = await dns.resolve4(hostname).catch(() => [] as string[]);
+    const addresses6 = await dns.resolve6(hostname).catch(() => [] as string[]);
+    
+    const allAddresses = [...addresses, ...addresses6];
+    
+    if (allAddresses.length === 0) {
+      throw new Error('Impossibile risolvere il DNS per questo dominio');
+    }
+
+    for (const addr of allAddresses) {
+      if (isPrivateOrReservedIp(addr)) {
+        throw new Error('Il dominio risolve a un indirizzo privato o riservato');
+      }
+    }
+  } catch (err: any) {
+    if (err.message.includes('risolve') || err.message.includes('privato')) {
+      throw err;
+    }
+    // DNS resolution errors
+    throw new Error('Errore nella risoluzione DNS del dominio');
+  }
+}
+
 export async function extractColorsFromUrl(url: string): Promise<ColorPalette> {
   try {
-    // 1. Fetch HTML del sito (con timeout)
+    // 0. Validate URL for security (SSRF protection with DNS resolution)
+    await validateUrl(url);
+
+    // 1. Fetch HTML with redirect protection (manual redirect handling)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'MedicoFlow Color Extractor/1.0'
+    let finalUrl = url;
+    let redirectCount = 0;
+    const maxRedirects = 5;
+    
+    while (redirectCount < maxRedirects) {
+      const response = await fetch(finalUrl, {
+        signal: controller.signal,
+        redirect: 'manual',  // Prevent automatic redirects
+        headers: {
+          'User-Agent': 'MedicoFlow Color Extractor/1.0'
+        }
+      });
+
+      // Handle redirects manually with validation
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) {
+          throw new Error('Redirect senza Location header');
+        }
+
+        // Resolve relative URLs
+        const redirectUrl = new URL(location, finalUrl).href;
+        
+        // Validate redirect target
+        await validateUrl(redirectUrl);
+        
+        finalUrl = redirectUrl;
+        redirectCount++;
+        continue;
       }
-    });
-    clearTimeout(timeout);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.status}`);
-    }
+      clearTimeout(timeout);
 
-    const html = await response.text();
+      if (!response.ok) {
+        throw new Error(`Failed to fetch URL: ${response.status}`);
+      }
 
-    // 2. Estrai sezione rilevante (primi 50KB per performance)
-    const htmlSnippet = html.substring(0, 50000);
+      const html = await response.text();
 
-    // 3. Usa OpenAI per analizzare ed estrarre colori
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: `Analizza questo HTML e CSS inline ed estrai la color palette principale del brand.
+      // 2. Estrai sezione rilevante (primi 50KB per performance)
+      const htmlSnippet = html.substring(0, 50000);
+
+      // 3. Usa OpenAI per analizzare ed estrarre colori
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: `Analizza questo HTML e CSS inline ed estrai la color palette principale del brand.
 
 HTML SNIPPET:
 \`\`\`html
@@ -69,48 +212,52 @@ IMPORTANTE:
 - Tutti i colori devono essere in formato esadecimale #RRGGBB
 - Se non trovi colori espliciti, estrapola dal contesto del brand
 - Assicurati che i colori abbiano buon contrasto per accessibilità`
-        }
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 500,
-      temperature: 0.3
-    });
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 500,
+        temperature: 0.3
+      });
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
-
-    // 4. Parse risposta JSON
-    const baseColors: Partial<ColorPalette> = JSON.parse(content);
-
-    // 5. Genera varianti light/dark usando la libreria color
-    const primaryColor = Color(baseColors.primary || '#2563eb');
-    
-    const palette: ColorPalette = {
-      primary: primaryColor.hex(),
-      primaryLight: primaryColor.lighten(0.2).hex(),
-      primaryDark: primaryColor.darken(0.2).hex(),
-      accent: baseColors.accent || '#10b981',
-      success: baseColors.success || '#22c55e',
-      warning: baseColors.warning || '#f59e0b',
-      error: baseColors.error || '#ef4444'
-    };
-
-    // 6. Valida formato colori
-    const hexPattern = /^#[0-9A-Fa-f]{6}$/;
-    const requiredKeys: (keyof ColorPalette)[] = [
-      'primary', 'primaryLight', 'primaryDark', 'accent', 
-      'success', 'warning', 'error'
-    ];
-
-    for (const key of requiredKeys) {
-      if (!palette[key] || !hexPattern.test(palette[key])) {
-        throw new Error(`Invalid color format for ${key}: ${palette[key]}`);
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
       }
-    }
 
-    return palette;
+      // 4. Parse risposta JSON
+      const baseColors: Partial<ColorPalette> = JSON.parse(content);
+
+      // 5. Genera varianti light/dark usando la libreria color
+      const primaryColor = Color(baseColors.primary || '#2563eb');
+      
+      const palette: ColorPalette = {
+        primary: primaryColor.hex(),
+        primaryLight: primaryColor.lighten(0.2).hex(),
+        primaryDark: primaryColor.darken(0.2).hex(),
+        accent: baseColors.accent || '#10b981',
+        success: baseColors.success || '#22c55e',
+        warning: baseColors.warning || '#f59e0b',
+        error: baseColors.error || '#ef4444'
+      };
+
+      // 6. Valida formato colori
+      const hexPattern = /^#[0-9A-Fa-f]{6}$/;
+      const requiredKeys: (keyof ColorPalette)[] = [
+        'primary', 'primaryLight', 'primaryDark', 'accent', 
+        'success', 'warning', 'error'
+      ];
+
+      for (const key of requiredKeys) {
+        if (!palette[key] || !hexPattern.test(palette[key])) {
+          throw new Error(`Invalid color format for ${key}: ${palette[key]}`);
+        }
+      }
+
+      return palette;
+    }
+    
+    clearTimeout(timeout);
+    throw new Error('Troppi redirect');
   } catch (error) {
     console.error('Error extracting colors:', error);
     throw new Error('Impossibile estrarre i colori dal sito. Verifica che l\'URL sia corretto e accessibile.');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, Palette, Loader2, Eye, Download, RotateCcw, Sparkles } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 interface ColorPalette {
   primary: string;
@@ -17,6 +18,18 @@ interface ColorPalette {
   success: string;
   warning: string;
   error: string;
+}
+
+interface ThemeSettings {
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  accent: string;
+  success: string;
+  warning: string;
+  error: string;
+  sourceType: 'default' | 'url' | 'custom';
+  sourceUrl: string | null;
 }
 
 export default function ImpostazioniAspetto() {
@@ -31,6 +44,36 @@ export default function ImpostazioniAspetto() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [sourceType, setSourceType] = useState<'default' | 'url' | 'custom'>('default');
+
+  // Fetch saved theme settings
+  const { data: savedTheme } = useQuery<ThemeSettings>({
+    queryKey: ['/api/theme', ambulatorioId],
+    queryFn: async () => {
+      const res = await fetch(`/api/theme?ambulatorioId=${ambulatorioId}`);
+      if (!res.ok) throw new Error('Failed to fetch theme');
+      return res.json();
+    },
+    enabled: !!ambulatorioId
+  });
+
+  // Sync preview palette with saved theme when it loads
+  useEffect(() => {
+    if (savedTheme) {
+      setPreviewPalette({
+        primary: savedTheme.primary,
+        primaryLight: savedTheme.primaryLight,
+        primaryDark: savedTheme.primaryDark,
+        accent: savedTheme.accent,
+        success: savedTheme.success,
+        warning: savedTheme.warning,
+        error: savedTheme.error
+      });
+      setSourceType(savedTheme.sourceType);
+      if (savedTheme.sourceUrl) {
+        setSiteUrl(savedTheme.sourceUrl);
+      }
+    }
+  }, [savedTheme]);
 
   const handleExtractColors = async () => {
     if (!siteUrl.trim()) {
