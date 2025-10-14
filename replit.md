@@ -24,7 +24,7 @@ The frontend is built with React 18, TypeScript, Wouter for routing, and TanStac
 - **Appointment Management**: Full CRUD for appointments with an interactive weekly calendar (7 days, 8:00-20:00, 30min slots), server-side conflict detection, and color-coded statuses.
 - **Digital Medical Record (Cartella Clinica)**: Structured forms for medical visits including anamnesis, objective examination, diagnosis, therapy, vital parameters, and chronological visit history. Medical alerts and allergies are prominently displayed.
 - **AI Voice-to-Clinical-Note**: Integrates Groq (Whisper Large v3) for audio transcription, converting voice recordings into editable text for clinical notes. Features high-quality audio capture and quota-based access.
-- **AI-Powered Brand Color Customization**: Allows medical practices to extract brand colors from their website URLs using Groq (llama-3.1-70b-versatile) for dynamic theme generation, ensuring WCAG AA accessibility compliance with automatic text color selection based on contrast.
+- **AI-Powered Brand Color Customization**: Allows medical practices to extract brand colors from their website URLs using Groq (llama-3.3-70b-versatile) for dynamic theme generation, ensuring WCAG AA accessibility compliance with automatic text color selection based on contrast.
 - **Settings Menu**: Comprehensive settings for clinic data, billing, team management, notifications, and privacy.
 - **Subscription & Pricing Tiers**: Implemented with feature flags for BASE, PROFESSIONAL, and ENTERPRISE access levels, including a lead capture system for pricing validation.
 
@@ -45,6 +45,31 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
 - **react-hook-form**: Forms management library.
 - **Zod**: Schema declaration and validation.
 - **Google Fonts**: For 'Inter' typeface.
-- **Groq API**: Used for Whisper Large v3 (audio transcription) and llama-3.1-70b-versatile (AI color extraction).
+- **Groq API**: Used for Whisper Large v3 (audio transcription) and llama-3.3-70b-versatile (AI color extraction).
 - **Multer**: Multipart/form-data handling.
 - **ipaddr.js**: IP address validation for SSRF protection.
+
+## Recent Updates (October 14, 2025)
+
+### AI Color Extraction - Groq Model Migration (Latest - Oct 14, 2025)
+- **Issue**: Groq deprecated `llama-3.1-70b-versatile` model → extraction failing with "model_decommissioned" error
+- **Fix #1 - Model Update**: Migrated to `llama-3.3-70b-versatile` (production model, 280 T/sec)
+- **Issue**: Token limit exceeded → "Request too large, 15152 tokens requested, limit 12000"  
+- **Fix #2 - Token Optimization**: Reduced HTML snippet from 50KB → 30KB (~7.5K tokens, safely under 12K limit)
+- **Result**: ✅ Successfully extracts Stripe colors (Primary: #0A2540, Accent: #635bff)
+- **Files Modified**: `server/ai/color-extractor.ts`
+
+### Theme Persistence Bug Fix (Oct 14, 2025)
+- **Issue**: Custom theme saves to database but doesn't persist after page reload
+- **Cause**: `applyPalette()` only updated CSS DOM, not React state
+- **Fix**: Created new `applyPalette()` function that calls BOTH:
+  - `applyTheme()` - Updates CSS variables in DOM
+  - `setPalette()` - Updates React context state
+- **Result**: ✅ Themes now persist correctly after reload
+- **Files Modified**: `client/src/contexts/ThemeContext.tsx`
+
+### Database Cleanup & Seed Fix (Oct 14, 2025)
+- **Issue**: 186 duplicate empty ambulatori in database
+- **Cleanup**: Removed duplicates via SQL, kept only 3 with real data
+- **Prevention**: Fixed `server/seed.ts` to check `ambulatori.length` (not `pazienti.length`)
+- **Result**: Database clean, no future duplicates

@@ -179,12 +179,12 @@ export async function extractColorsFromUrl(url: string): Promise<ColorPalette> {
 
       const html = await response.text();
 
-      // 2. Estrai sezione rilevante (primi 50KB per performance)
-      const htmlSnippet = html.substring(0, 50000);
+      // 2. Estrai sezione rilevante (primi 30KB per evitare token limit di Groq)
+      const htmlSnippet = html.substring(0, 30000);
 
-      // 3. Usa Groq (Llama 3.1) per analizzare ed estrarre colori
+      // 3. Usa Groq (Llama 3.3) per analizzare ed estrarre colori
       const completion = await groq.chat.completions.create({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'user',
