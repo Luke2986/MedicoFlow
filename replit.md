@@ -65,6 +65,43 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 - **Google Fonts**: For 'Inter' typeface.
 - **Groq API**: Whisper Large v3 for audio transcription.
 - **Multer**: Multipart/form-data handling for file uploads.
+- **OpenAI API**: GPT-4o-mini for AI-powered color extraction from websites.
+- **ipaddr.js**: IP address validation for SSRF protection.
+- **color**: Color manipulation and conversion utilities.
+
+## Recent Updates (October 14, 2025)
+
+### AI-Powered Brand Color Customization (Latest - October 14, 2025)
+- **Dynamic Theme System**: Medical practices can now extract and apply their brand colors from their website URLs using AI-powered color extraction
+  - **AI Color Extraction**: OpenAI GPT-4o-mini analyzes website HTML/CSS to extract brand palette (primary, accent, success, warning, error colors)
+  - **Live Preview**: Real-time palette visualization with color swatches and interactive button previews before applying
+  - **CSS Variables**: Applied theme updates CSS custom properties dynamically across the entire application
+  - **Persistence**: Theme settings saved to database per ambulatorio with ThemeProvider context management
+- **Production-Grade SSRF Protection**:
+  - **Protocol Validation**: HTTPS-only requirement
+  - **DNS Resolution**: Pre-validates hostnames, resolves IPv4/IPv6 addresses before HTTP requests
+  - **IP Range Blocking**: Blocks localhost, private networks (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), link-local (169.254.0.0/16), multicast, AWS metadata (169.254.169.254), IPv4-mapped IPv6
+  - **Redirect Validation**: Manual redirect handling with validation at each hop
+  - **Library**: Uses `ipaddr.js` for robust IP classification
+- **Database Schema**: 
+  - Table: `theme_settings` (ambulatorioId, primary, primaryLight, primaryDark, accent, success, warning, error, sourceType, sourceUrl)
+  - sourceType: 'default' | 'url' | 'custom' tracks theme origin
+- **Frontend Implementation**:
+  - `/dashboard/impostazioni/aspetto` - Theme customization page with AI extraction
+  - ThemeProvider context integrates with App.tsx for global theme management
+  - Form inputs: URL extraction, manual color pickers, reset to defaults
+  - Visual feedback: Loading states, success/error toasts, color palette cards
+- **API Endpoints**:
+  - `POST /api/theme/extract` - AI color extraction from website URL (requires OPENAI_API_KEY)
+  - `GET /api/theme?ambulatorioId={id}` - Retrieve saved theme
+  - `PUT /api/theme` - Save custom theme
+  - `DELETE /api/theme?ambulatorioId={id}` - Reset to default palette
+- **User Workflow**: Settings → Aspetto → Enter website URL → AI extracts colors → Preview palette → Apply → Theme persists globally
+- **E2E Tested**: Extraction from https://stripe.com (#0A2540 primary, #635BFF accent) → Save → Reload persistence → Reset verified
+- **Technical Notes**: 
+  - Color library converts hex → HSL for CSS variable compatibility
+  - Falls back to default medical blue (#2563eb) on extraction errors
+  - React Query with explicit queryFn ensures ambulatorioId in GET requests
 
 ## Recent Updates (October 13, 2025)
 
