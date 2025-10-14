@@ -138,7 +138,8 @@ const styles = StyleSheet.create({
 });
 
 interface CartellaClinicaPDFProps {
-  visita: Visita;
+  visita: Visita | null; // Singola visita (per retrocompatibilità)
+  visite?: Visita[]; // Array di visite (per cartella completa)
   paziente: Paziente;
   ambulatorio: Ambulatorio;
   medicoNome: string;
@@ -158,10 +159,14 @@ function safeFormatDate(date: string | Date | null | undefined, formatStr: strin
 
 export default function CartellaClinicaPDF({ 
   visita, 
+  visite,
   paziente,
   ambulatorio, 
   medicoNome
 }: CartellaClinicaPDFProps) {
+  // Usa array di visite se disponibile, altrimenti singola visita
+  const visiteDaRenderizzare = visite && visite.length > 0 ? visite : (visita ? [visita] : []);
+
   return (
     <Document
       title={`Cartella Clinica - ${paziente.cognome} ${paziente.nome}`}
@@ -187,7 +192,7 @@ export default function CartellaClinicaPDF({
               P.IVA: {ambulatorio.piva} | {ambulatorio.specializzazione}
             </Text>
           </View>
-          <Text style={styles.documentTitle}>CARTELLA CLINICA</Text>
+          <Text style={styles.documentTitle}>CARTELLA CLINICA COMPLETA</Text>
         </View>
 
         {/* Patient Info */}
@@ -211,100 +216,114 @@ export default function CartellaClinicaPDF({
             </Text>
           </View>
           <View style={styles.patientRow}>
-            <Text style={styles.patientLabel}>Data Visita:</Text>
+            <Text style={styles.patientLabel}>Totale Visite:</Text>
             <Text style={styles.patientValue}>
-              {safeFormatDate(visita.dataVisita, 'dd MMMM yyyy', { locale: it })}
-            </Text>
-          </View>
-          <View style={styles.patientRow}>
-            <Text style={styles.patientLabel}>Motivo Visita:</Text>
-            <Text style={styles.patientValue}>
-              {visita.motivoVisita}
+              {visiteDaRenderizzare.length} visite registrate
             </Text>
           </View>
         </View>
 
-        {/* Diagnosi (prima sezione - più importante) */}
-        {visita.diagnosi && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>DIAGNOSI</Text>
-            <Text style={styles.sectionContent}>{visita.diagnosi}</Text>
-          </View>
-        )}
-
-        {/* Anamnesi */}
-        {visita.anamnesi && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ANAMNESI</Text>
-            <Text style={styles.sectionContent}>{visita.anamnesi}</Text>
-          </View>
-        )}
-
-        {/* Esame Obiettivo */}
-        {visita.esameObiettivo && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ESAME OBIETTIVO</Text>
-            <Text style={styles.sectionContent}>{visita.esameObiettivo}</Text>
-          </View>
-        )}
-
-        {/* Parametri Vitali */}
-        {(visita.peso || visita.altezza || visita.pressioneSistolica || visita.frequenzaCardiaca || visita.temperatura) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PARAMETRI VITALI</Text>
-            <View style={styles.vitalParameters}>
-              {visita.peso && (
-                <Text style={styles.vitalBadge}>Peso: {visita.peso} kg</Text>
-              )}
-              {visita.altezza && (
-                <Text style={styles.vitalBadge}>Altezza: {visita.altezza} cm</Text>
-              )}
-              {visita.pressioneSistolica && visita.pressioneDiastolica && (
-                <Text style={styles.vitalBadge}>
-                  Pressione: {visita.pressioneSistolica}/{visita.pressioneDiastolica} mmHg
-                </Text>
-              )}
-              {visita.frequenzaCardiaca && (
-                <Text style={styles.vitalBadge}>Frequenza: {visita.frequenzaCardiaca} bpm</Text>
-              )}
-              {visita.temperatura && (
-                <Text style={styles.vitalBadge}>Temperatura: {(visita.temperatura / 10).toFixed(1)}°C</Text>
-              )}
+        {/* STORICO VISITE - Loop su tutte le visite */}
+        {visiteDaRenderizzare.map((vis, index) => (
+          <View key={vis.id || index} style={styles.section} break={index > 0}>
+            {/* Header Visita */}
+            <View style={{...styles.sectionHeader, backgroundColor: '#dbeafe', borderLeftColor: '#3b82f6'}}>
+              <Text style={{...styles.sectionTitle, fontSize: 12}}>
+                📅 VISITA DEL {safeFormatDate(vis.dataVisita, 'd MMMM yyyy', { locale: it })}
+              </Text>
             </View>
-          </View>
-        )}
+            
+            {/* Motivo Visita */}
+            {vis.motivoVisita && (
+              <View style={{marginBottom: 8, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, color: '#6b7280', marginBottom: 2}}>Motivo:</Text>
+                <Text style={{fontSize: 10, color: '#111827', fontWeight: 'bold'}}>{vis.motivoVisita}</Text>
+              </View>
+            )}
 
-        {/* Terapia e Prescrizioni */}
-        {visita.terapia && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>TERAPIA E PRESCRIZIONI</Text>
-            <Text style={styles.sectionContent}>{visita.terapia}</Text>
-          </View>
-        )}
+            {/* Diagnosi */}
+            {vis.diagnosi && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>DIAGNOSI</Text>
+                <Text style={styles.sectionContent}>{vis.diagnosi}</Text>
+              </View>
+            )}
 
-        {/* Prescrizione Farmaci */}
-        {visita.prescrizioneFarmaci && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>PRESCRIZIONE FARMACI</Text>
-            <Text style={styles.sectionContent}>{visita.prescrizioneFarmaci}</Text>
-          </View>
-        )}
+            {/* Anamnesi */}
+            {vis.anamnesi && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>ANAMNESI</Text>
+                <Text style={styles.sectionContent}>{vis.anamnesi}</Text>
+              </View>
+            )}
 
-        {/* Esami Eseguiti */}
-        {visita.esamiEseguiti && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ESAMI ESEGUITI</Text>
-            <Text style={styles.sectionContent}>{visita.esamiEseguiti}</Text>
-          </View>
-        )}
+            {/* Esame Obiettivo */}
+            {vis.esameObiettivo && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>ESAME OBIETTIVO</Text>
+                <Text style={styles.sectionContent}>{vis.esameObiettivo}</Text>
+              </View>
+            )}
 
-        {/* Note Cliniche */}
-        {visita.noteCliniche && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>NOTE CLINICHE</Text>
-            <Text style={styles.sectionContent}>{visita.noteCliniche}</Text>
+            {/* Parametri Vitali */}
+            {(vis.peso || vis.altezza || vis.pressioneSistolica || vis.frequenzaCardiaca || vis.temperatura) && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>PARAMETRI VITALI</Text>
+                <View style={styles.vitalParameters}>
+                  {vis.peso && (
+                    <Text style={styles.vitalBadge}>Peso: {vis.peso} kg</Text>
+                  )}
+                  {vis.altezza && (
+                    <Text style={styles.vitalBadge}>Altezza: {vis.altezza} cm</Text>
+                  )}
+                  {vis.pressioneSistolica && vis.pressioneDiastolica && (
+                    <Text style={styles.vitalBadge}>
+                      PA: {vis.pressioneSistolica}/{vis.pressioneDiastolica} mmHg
+                    </Text>
+                  )}
+                  {vis.frequenzaCardiaca && (
+                    <Text style={styles.vitalBadge}>FC: {vis.frequenzaCardiaca} bpm</Text>
+                  )}
+                  {vis.temperatura && (
+                    <Text style={styles.vitalBadge}>Temp: {(vis.temperatura / 10).toFixed(1)}°C</Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Terapia */}
+            {vis.terapia && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>TERAPIA</Text>
+                <Text style={styles.sectionContent}>{vis.terapia}</Text>
+              </View>
+            )}
+
+            {/* Prescrizioni */}
+            {vis.prescrizioneFarmaci && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>PRESCRIZIONI</Text>
+                <Text style={styles.sectionContent}>{vis.prescrizioneFarmaci}</Text>
+              </View>
+            )}
+
+            {/* Esami */}
+            {vis.esamiEseguiti && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>ESAMI</Text>
+                <Text style={styles.sectionContent}>{vis.esamiEseguiti}</Text>
+              </View>
+            )}
+
+            {/* Note */}
+            {vis.noteCliniche && (
+              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
+                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>NOTE CLINICHE</Text>
+                <Text style={styles.sectionContent}>{vis.noteCliniche}</Text>
+              </View>
+            )}
           </View>
-        )}
+        ))}
 
         {/* Footer con firma */}
         <View style={styles.footer}>

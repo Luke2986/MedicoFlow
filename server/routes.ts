@@ -365,6 +365,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/pazienti/:id/cartella-pdf", async (req, res) => {
+    try {
+      const pazienteId = req.params.id;
+      
+      // Carica paziente
+      const paziente = await storage.getPaziente(pazienteId);
+      if (!paziente) {
+        return res.status(404).json({ error: "Paziente non trovato" });
+      }
+
+      // Carica ambulatorio
+      const ambulatorio = await storage.getAmbulatorio(paziente.ambulatorioId);
+      if (!ambulatorio) {
+        return res.status(404).json({ error: "Ambulatorio non trovato" });
+      }
+
+      // Carica TUTTE le visite del paziente (ordinate cronologicamente)
+      const visite = await storage.getVisiteByPaziente(pazienteId);
+      const visiteSorted = visite.sort((a, b) => 
+        new Date(b.dataVisita).getTime() - new Date(a.dataVisita).getTime()
+      );
+
+      // Carica medico (usa il medico della visita più recente, o default)
+      let medicoNome = 'Medico';
+      if (visiteSorted.length > 0) {
+        const medico = await storage.getUser(visiteSorted[0].medicoId);
+        medicoNome = medico ? `Dr. ${medico.cognome} ${medico.nome}` : 'Medico';
+      }
+
+      // Genera PDF con componente per cartella completa
+      const pdfStream = await renderToStream(
+        CartellaClinicaPDF({
+          visita: visiteSorted[0] || null, // Prima visita (più recente) per compatibilità
+          visite: visiteSorted, // Array completo visite
+          paziente,
+          ambulatorio,
+          medicoNome
+        })
+      );
+
+      // Imposta headers per download
+      const fileName = `CartellaClinica_${paziente.cognome}_${paziente.nome}_${new Date().toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      // Stream PDF to response
+      pdfStream.pipe(res);
+    } catch (error: any) {
+      console.error("Errore generazione PDF cartella:", error);
+      res.status(500).json({ error: "Errore durante la generazione del PDF" });
+    }
+  });
+
   app.get("/api/pazienti/:id", async (req, res) => {
     try {
       const paziente = await storage.getPaziente(req.params.id);

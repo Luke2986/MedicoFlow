@@ -339,14 +339,28 @@ export default function CartellaClinica() {
                 </div>
               </div>
 
-              <Button 
-                onClick={() => setDialogOpen(true)}
-                data-testid="button-nuova-visita"
-                className="gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Nuova Visita
-              </Button>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    // Genera PDF dell'intera cartella clinica del paziente
+                    window.open(`/api/pazienti/${selectedPaziente}/cartella-pdf`, '_blank');
+                  }}
+                  data-testid="button-esporta-cartella-pdf"
+                  className="gap-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                >
+                  <Download className="w-5 h-5" />
+                  Esporta PDF Cartella
+                </Button>
+                <Button 
+                  onClick={() => setDialogOpen(true)}
+                  data-testid="button-nuova-visita"
+                  className="gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Nuova Visita
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -442,18 +456,6 @@ export default function CartellaClinica() {
                         >
                           <Pencil className="w-4 h-4" />
                           Modifica
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            window.open(`/api/visite/${visita.id}/pdf`, '_blank');
-                          }}
-                          data-testid={`button-download-pdf-${visita.id}`}
-                          className="gap-1"
-                        >
-                          <Download className="w-4 h-4" />
-                          PDF
                         </Button>
                         <Button
                           variant="ghost"
