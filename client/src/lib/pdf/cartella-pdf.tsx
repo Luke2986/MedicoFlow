@@ -234,65 +234,86 @@ export default function CartellaClinicaPDF({
         {visiteDaRenderizzare.map((vis, index) => (
           <View key={vis.id || index} style={styles.section} break={index > 0}>
             {/* Header Visita */}
-            <View style={{...styles.sectionHeader, backgroundColor: '#dbeafe', borderLeftColor: '#3b82f6'}}>
-              <Text style={{...styles.sectionTitle, fontSize: 12}}>
-                📅 VISITA DEL {safeFormatDate(vis.dataVisita, 'd MMMM yyyy', { locale: it })}
+            <View style={{
+              backgroundColor: '#dbeafe', 
+              borderLeftWidth: 4,
+              borderLeftColor: '#3b82f6',
+              borderRadius: 4,
+              paddingVertical: 12,
+              paddingHorizontal: 12,
+              marginBottom: 10
+            }}>
+              <Text style={{
+                fontSize: 13,
+                fontWeight: 'bold',
+                color: '#1e40af',
+                textTransform: 'uppercase'
+              }}>
+                VISITA DEL {safeFormatDate(vis.dataVisita, 'd MMMM yyyy', { locale: it }).toUpperCase()}
               </Text>
             </View>
             
             {/* Motivo Visita */}
             {vis.motivoVisita && (
-              <View style={{marginBottom: 8, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, color: '#6b7280', marginBottom: 2}}>Motivo:</Text>
-                <Text style={{fontSize: 10, color: '#111827', fontWeight: 'bold'}}>{vis.motivoVisita}</Text>
+              <View style={{marginBottom: 10, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 10, color: '#6b7280', marginBottom: 3, fontWeight: 'bold'}}>Motivo:</Text>
+                <Text style={{fontSize: 11, color: '#111827'}}>{vis.motivoVisita}</Text>
               </View>
             )}
 
             {/* Diagnosi */}
             {vis.diagnosi && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>DIAGNOSI</Text>
-                <Text style={styles.sectionContent}>{vis.diagnosi}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>DIAGNOSI</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.diagnosi}</Text>
               </View>
             )}
 
             {/* Anamnesi */}
             {vis.anamnesi && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>ANAMNESI</Text>
-                <Text style={styles.sectionContent}>{vis.anamnesi}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>ANAMNESI</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.anamnesi}</Text>
               </View>
             )}
 
             {/* Esame Obiettivo */}
             {vis.esameObiettivo && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>ESAME OBIETTIVO</Text>
-                <Text style={styles.sectionContent}>{vis.esameObiettivo}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>ESAME OBIETTIVO</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.esameObiettivo}</Text>
               </View>
             )}
 
             {/* Parametri Vitali */}
             {(vis.peso || vis.altezza || vis.pressioneSistolica || vis.frequenzaCardiaca || vis.temperatura) && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>PARAMETRI VITALI</Text>
-                <View style={styles.vitalParameters}>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>PARAMETRI VITALI</Text>
+                <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4}}>
                   {vis.peso && (
-                    <Text style={styles.vitalBadge}>Peso: {vis.peso} kg</Text>
+                    <Text style={{backgroundColor: '#e0e7ff', padding: 8, borderRadius: 4, fontSize: 10, color: '#1e40af'}}>
+                      Peso: {vis.peso} kg
+                    </Text>
                   )}
                   {vis.altezza && (
-                    <Text style={styles.vitalBadge}>Altezza: {vis.altezza} cm</Text>
+                    <Text style={{backgroundColor: '#e0e7ff', padding: 8, borderRadius: 4, fontSize: 10, color: '#1e40af'}}>
+                      Altezza: {vis.altezza} cm
+                    </Text>
                   )}
                   {vis.pressioneSistolica && vis.pressioneDiastolica && (
-                    <Text style={styles.vitalBadge}>
+                    <Text style={{backgroundColor: '#e0e7ff', padding: 8, borderRadius: 4, fontSize: 10, color: '#1e40af'}}>
                       PA: {vis.pressioneSistolica}/{vis.pressioneDiastolica} mmHg
                     </Text>
                   )}
                   {vis.frequenzaCardiaca && (
-                    <Text style={styles.vitalBadge}>FC: {vis.frequenzaCardiaca} bpm</Text>
+                    <Text style={{backgroundColor: '#e0e7ff', padding: 8, borderRadius: 4, fontSize: 10, color: '#1e40af'}}>
+                      FC: {vis.frequenzaCardiaca} bpm
+                    </Text>
                   )}
                   {vis.temperatura && (
-                    <Text style={styles.vitalBadge}>Temp: {(vis.temperatura / 10).toFixed(1)}°C</Text>
+                    <Text style={{backgroundColor: '#e0e7ff', padding: 8, borderRadius: 4, fontSize: 10, color: '#1e40af'}}>
+                      Temp: {(vis.temperatura / 10).toFixed(1)}°C
+                    </Text>
                   )}
                 </View>
               </View>
@@ -300,33 +321,33 @@ export default function CartellaClinicaPDF({
 
             {/* Terapia */}
             {vis.terapia && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>TERAPIA</Text>
-                <Text style={styles.sectionContent}>{vis.terapia}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>TERAPIA</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.terapia}</Text>
               </View>
             )}
 
             {/* Prescrizioni */}
             {vis.prescrizioneFarmaci && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>PRESCRIZIONI</Text>
-                <Text style={styles.sectionContent}>{vis.prescrizioneFarmaci}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>PRESCRIZIONI</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.prescrizioneFarmaci}</Text>
               </View>
             )}
 
             {/* Esami */}
             {vis.esamiEseguiti && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>ESAMI</Text>
-                <Text style={styles.sectionContent}>{vis.esamiEseguiti}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>ESAMI</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.esamiEseguiti}</Text>
               </View>
             )}
 
             {/* Note */}
             {vis.noteCliniche && (
-              <View style={{marginBottom: 10, paddingHorizontal: 10}}>
-                <Text style={{fontSize: 9, fontWeight: 'bold', color: '#1e40af', marginBottom: 3}}>NOTE CLINICHE</Text>
-                <Text style={styles.sectionContent}>{vis.noteCliniche}</Text>
+              <View style={{marginBottom: 12, paddingHorizontal: 12}}>
+                <Text style={{fontSize: 11, fontWeight: 'bold', color: '#1e40af', marginBottom: 4}}>NOTE CLINICHE</Text>
+                <Text style={{fontSize: 11, color: '#374151', lineHeight: 1.6}}>{vis.noteCliniche}</Text>
               </View>
             )}
           </View>
