@@ -50,6 +50,7 @@ export default function BillingPage() {
   const [selectedPlan, setSelectedPlan] = useState<keyof typeof PLAN_DETAILS | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<PlanKey>("PROFESSIONAL");
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -115,7 +116,6 @@ export default function BillingPage() {
   }
 
   const currentPlan = subscription?.piano as PlanKey;
-  const [selectedTab, setSelectedTab] = useState<PlanKey>("PROFESSIONAL");
 
   return (
     <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8" data-testid="page-billing">

@@ -85,6 +85,11 @@ function Router() {
           <Impostazioni />
         </DashboardLayout>
       </Route>
+      <Route path="/billing">
+        <DashboardLayout>
+          <Billing />
+        </DashboardLayout>
+      </Route>
       <Route path="/dashboard/impostazioni/billing">
         <DashboardLayout>
           <Billing />
