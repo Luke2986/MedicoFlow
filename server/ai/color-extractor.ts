@@ -267,8 +267,19 @@ IMPORTANTE:
     
     clearTimeout(timeout);
     throw new Error('Troppi redirect');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error extracting colors:', error);
+    
+    // Check if it's a rate limit error
+    if (error.status === 429 || error.code === 'rate_limit_exceeded') {
+      throw new Error('Limite API OpenAI raggiunto. Riprova tra qualche ora oppure inserisci i colori manualmente usando i selettori colore sotto.');
+    }
+    
+    // Check if OpenAI API key is missing
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('API key OpenAI non configurata. Usa i selettori colore manuali sotto per personalizzare il tema.');
+    }
+    
     throw new Error('Impossibile estrarre i colori dal sito. Verifica che l\'URL sia corretto e accessibile.');
   }
 }
