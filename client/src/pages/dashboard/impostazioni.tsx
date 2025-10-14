@@ -8,7 +8,8 @@ import {
   Shield,
   HelpCircle,
   Settings as SettingsIcon,
-  ChevronRight
+  ChevronRight,
+  Palette
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,7 +34,8 @@ const colorClasses: Record<string, string> = {
   orange: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
   yellow: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
   red: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
-  gray: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+  gray: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400",
+  indigo: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
 };
 
 export default function Impostazioni() {
@@ -70,6 +72,14 @@ export default function Impostazioni() {
       href: "/dashboard/impostazioni/billing",
       color: "green",
       badge: subscription?.piano === "PROFESSIONAL" ? "PRO" : subscription?.piano === "ENTERPRISE" ? "ENTERPRISE" : null
+    },
+    {
+      title: "Aspetto",
+      description: "Personalizza colori e tema della piattaforma",
+      icon: Palette,
+      href: "/dashboard/impostazioni/aspetto",
+      color: "indigo",
+      badge: "AI"
     },
     {
       title: "Gestione Team",

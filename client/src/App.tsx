@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard/index";
@@ -20,6 +21,7 @@ import ImpostazioniTeam from "@/pages/dashboard/impostazioni/team";
 import ImpostazioniNotifiche from "@/pages/dashboard/impostazioni/notifiche";
 import ImpostazioniPrivacy from "@/pages/dashboard/impostazioni/privacy";
 import ImpostazioniSupporto from "@/pages/dashboard/impostazioni/supporto";
+import ImpostazioniAspetto from "@/pages/dashboard/impostazioni/aspetto";
 import Pricing from "@/pages/pricing";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -113,6 +115,11 @@ function Router() {
           <ImpostazioniSupporto />
         </DashboardLayout>
       </Route>
+      <Route path="/dashboard/impostazioni/aspetto">
+        <DashboardLayout>
+          <ImpostazioniAspetto />
+        </DashboardLayout>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -121,10 +128,12 @@ function Router() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
