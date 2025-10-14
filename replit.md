@@ -51,7 +51,19 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
 
 ## Recent Updates (October 14, 2025)
 
-### AI Color Extraction - Groq Model Migration (Latest - Oct 14, 2025)
+### Interactive Plan Switching UI (Latest - Oct 14, 2025)
+- **Feature**: Added interactive Tabs for plan comparison in billing page
+- **Implementation**: 
+  - Tabs component (BASE, PROFESSIONAL, ENTERPRISE) for dynamic plan switching
+  - Real-time feature updates when switching plans
+  - Patient/user limits display (with "Illimitati" for unlimited plans)
+  - FEATURE_NAMES integration for readable feature names
+- **Routes**: Added `/billing` route alongside `/dashboard/impostazioni/billing`
+- **Fix**: Resolved React Hooks ordering issue (moved useState before conditional returns)
+- **Testing**: E2E test passed ✅ - verified tab switching, feature updates, limits display
+- **Files Modified**: `client/src/pages/dashboard/billing.tsx`, `client/src/App.tsx`
+
+### AI Color Extraction - Groq Model Migration (Oct 14, 2025)
 - **Issue**: Groq deprecated `llama-3.1-70b-versatile` model → extraction failing with "model_decommissioned" error
 - **Fix #1 - Model Update**: Migrated to `llama-3.3-70b-versatile` (production model, 280 T/sec)
 - **Issue**: Token limit exceeded → "Request too large, 15152 tokens requested, limit 12000"  
