@@ -144,6 +144,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--chart-5', hexToHSL(colors.error));
   };
 
+  const applyPalette = (colors: ColorPalette) => {
+    applyTheme(colors);
+    setPalette(colors);
+  };
+
   const loadTheme = async () => {
     if (!ambulatorioId) {
       setIsLoading(false);
@@ -172,7 +177,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     <ThemeContext.Provider value={{ 
       palette, 
       reloadTheme: loadTheme, 
-      applyPalette: applyTheme,
+      applyPalette,
       isLoading 
     }}>
       {children}

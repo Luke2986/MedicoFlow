@@ -6,43 +6,41 @@ import { eq } from "drizzle-orm";
 
 export async function seedDatabase() {
   try {
-    const pazienti = await storage.getPazienti("temp");
+    // Check if any ambulatori exist (not just pazienti)
+    const existingAmbulatori = await storage.getAllAmbulatori();
     
-    if (pazienti.length === 0) {
+    if (existingAmbulatori.length === 0) {
       // Create default ambulatorio with fixed ID for fallback (direct DB insert to specify ID)
-      const [existingDefault] = await db.select().from(ambulatori).where(eq(ambulatori.id, "default-ambulatorio-id"));
+      await db.insert(ambulatori).values({
+        id: "default-ambulatorio-id",
+        nome: "Ambulatorio Demo",
+        indirizzo: "Via Demo 1",
+        citta: "Milano",
+        provincia: "MI",
+        cap: "20100",
+        telefono: "+39 02 0000000",
+        email: "demo@medicoflow.it",
+        piva: "00000000000",
+        regione: "Lombardia",
+        specializzazione: "Medicina Generale",
+      });
+
+      // Create trial subscription for default ambulatorio
+      const defaultTrialEnd = new Date();
+      defaultTrialEnd.setDate(defaultTrialEnd.getDate() + 30);
       
-      if (!existingDefault) {
-        await db.insert(ambulatori).values({
-          id: "default-ambulatorio-id",
-          nome: "Ambulatorio Demo",
-          indirizzo: "Via Demo 1",
-          citta: "Milano",
-          provincia: "MI",
-          cap: "20100",
-          telefono: "+39 02 0000000",
-          email: "demo@medicoflow.it",
-          piva: "00000000000",
-          regione: "Lombardia",
-          specializzazione: "Medicina Generale",
-        });
+      await storage.createSubscription({
+        ambulatorioId: "default-ambulatorio-id",
+        piano: "BASE",
+        status: "TRIAL",
+        prezzoMensile: PLANS.BASE.price * 100,
+        features: [...PLANS.BASE.features],
+        dataFine: defaultTrialEnd,
+      });
 
-        // Create trial subscription for default ambulatorio
-        const defaultTrialEnd = new Date();
-        defaultTrialEnd.setDate(defaultTrialEnd.getDate() + 30);
-        
-        await storage.createSubscription({
-          ambulatorioId: "default-ambulatorio-id",
-          piano: "BASE",
-          status: "TRIAL",
-          prezzoMensile: PLANS.BASE.price * 100,
-          features: [...PLANS.BASE.features],
-          dataFine: defaultTrialEnd,
-        });
+      console.log("✅ Default ambulatorio created with ID: default-ambulatorio-id");
 
-        console.log("✅ Default ambulatorio created with ID: default-ambulatorio-id");
-      }
-
+      // Create main demo ambulatorio
       const ambulatorio = await storage.createAmbulatorio({
         nome: "Ambulatorio Dr. Mario Rossi",
         indirizzo: "Via Roma 123",
@@ -73,14 +71,16 @@ export async function seedDatabase() {
         piano: "BASE",
         status: "TRIAL",
         prezzoMensile: PLANS.BASE.price * 100,
-        features: [...PLANS.BASE.features], // Spread to convert readonly to mutable
+        features: [...PLANS.BASE.features],
         dataFine: trialEndDate,
       });
 
       console.log("✅ Database seeded successfully with ambulatorio:", ambulatorio.id);
       console.log("✅ Subscription trial creata (30 giorni) - Piano BASE");
+    } else {
+      console.log("ℹ️  Seed skipped - ambulatori already exist");
     }
   } catch (error) {
-    console.log("ℹ️  Seed skipped or already exists");
+    console.log("ℹ️  Seed error or already exists:", error);
   }
 }
