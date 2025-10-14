@@ -44,8 +44,9 @@ function isPrivateOrReservedIp(ipString: string): boolean {
     
     // Additional check for IPv4-mapped IPv6 addresses
     if (addr.kind() === 'ipv6') {
-      if (addr.isIPv4MappedAddress()) {
-        const ipv4 = addr.toIPv4Address();
+      const ipv6Addr = addr as ipaddr.IPv6;
+      if (ipv6Addr.isIPv4MappedAddress()) {
+        const ipv4 = ipv6Addr.toIPv4Address();
         return isPrivateOrReservedIp(ipv4.toString());
       }
     }
@@ -230,9 +231,8 @@ IMPORTANTE:
       // 5. Genera varianti light/dark usando la libreria color
       const primaryColor = Color(baseColors.primary || '#2563eb');
       
-      // Get HSL values to manipulate lightness more precisely
-      const hsl = primaryColor.hsl();
-      const baseLightness = hsl.color[2]; // L value (0-100)
+      // Get current lightness value
+      const baseLightness = primaryColor.lightness();
       
       // Calculate light/dark variants with absolute lightness values
       // This prevents going to pure black (#000000) or pure white (#FFFFFF)
