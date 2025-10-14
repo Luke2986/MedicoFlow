@@ -17,7 +17,8 @@ import {
   Trash2,
   FileText,
   Pill,
-  Activity
+  Activity,
+  Download
 } from "lucide-react";
 import { format, differenceInYears, formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -123,12 +124,25 @@ export default function PazienteDettaglio() {
                 </span>
               </div>
             </div>
-            <Link href={`/dashboard/cartella-clinica?pazienteId=${pazienteId}`}>
-              <Button className="w-full md:w-auto" data-testid="button-nuova-visita">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova Visita
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  window.open(`/api/pazienti/${pazienteId}/cartella-pdf`, '_blank');
+                }}
+                className="w-full sm:w-auto border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                data-testid="button-esporta-cartella-pdf"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Esporta PDF
               </Button>
-            </Link>
+              <Link href={`/dashboard/cartella-clinica?pazienteId=${pazienteId}`}>
+                <Button className="w-full md:w-auto" data-testid="button-nuova-visita">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuova Visita
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardHeader>
 
