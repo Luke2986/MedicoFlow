@@ -7,6 +7,7 @@ import {
   visite,
   subscriptions,
   pricingLeads,
+  themeSettings,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -21,6 +22,8 @@ import {
   type InsertSubscription,
   type PricingLead,
   type InsertPricingLead,
+  type ThemeSettings,
+  type InsertThemeSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
@@ -79,6 +82,10 @@ export interface IStorage {
   getPricingLead(id: string): Promise<PricingLead | undefined>;
   createPricingLead(lead: InsertPricingLead): Promise<PricingLead>;
   updatePricingLeadStatus(id: string, status: "NUOVO" | "CONTATTATO" | "CONVERTITO" | "PERSO"): Promise<PricingLead>;
+  
+  getThemeSettings(ambulatorioId: string): Promise<ThemeSettings | undefined>;
+  upsertThemeSettings(ambulatorioId: string, settings: InsertThemeSettings): Promise<ThemeSettings>;
+  deleteThemeSettings(ambulatorioId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -460,6 +467,39 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!lead) throw new Error("Lead non trovato");
     return lead;
+  }
+
+  async getThemeSettings(ambulatorioId: string): Promise<ThemeSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(themeSettings)
+      .where(eq(themeSettings.ambulatorioId, ambulatorioId));
+    return settings || undefined;
+  }
+
+  async upsertThemeSettings(ambulatorioId: string, insertSettings: InsertThemeSettings): Promise<ThemeSettings> {
+    const existing = await this.getThemeSettings(ambulatorioId);
+
+    if (existing) {
+      const [updated] = await db
+        .update(themeSettings)
+        .set({ ...insertSettings, updatedAt: new Date() })
+        .where(eq(themeSettings.ambulatorioId, ambulatorioId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(themeSettings)
+        .values(insertSettings)
+        .returning();
+      return created;
+    }
+  }
+
+  async deleteThemeSettings(ambulatorioId: string): Promise<void> {
+    await db
+      .delete(themeSettings)
+      .where(eq(themeSettings.ambulatorioId, ambulatorioId));
   }
 }
 

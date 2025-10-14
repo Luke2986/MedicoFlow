@@ -358,3 +358,44 @@ export const updatePricingLeadSchema = insertPricingLeadSchema.partial().extend(
 
 export type PricingLead = typeof pricingLeads.$inferSelect;
 export type InsertPricingLead = z.infer<typeof insertPricingLeadSchema>;
+
+export const themeSettings = pgTable("theme_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().unique().references(() => ambulatori.id),
+  
+  primaryColor: varchar("primary_color", { length: 7 }).notNull().default("#2563eb"),
+  primaryLight: varchar("primary_light", { length: 7 }).notNull().default("#3b82f6"),
+  primaryDark: varchar("primary_dark", { length: 7 }).notNull().default("#1e40af"),
+  accentColor: varchar("accent_color", { length: 7 }).notNull().default("#10b981"),
+  successColor: varchar("success_color", { length: 7 }).notNull().default("#22c55e"),
+  warningColor: varchar("warning_color", { length: 7 }).notNull().default("#f59e0b"),
+  errorColor: varchar("error_color", { length: 7 }).notNull().default("#ef4444"),
+  
+  sourceType: varchar("source_type", { length: 20 }).notNull().default("default"),
+  sourceUrl: text("source_url"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  ambulatorioIdx: index("theme_ambulatorio_idx").on(table.ambulatorioId),
+}));
+
+export const insertThemeSettingsSchema = createInsertSchema(themeSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  primaryLight: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  primaryDark: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  successColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  warningColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  errorColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Deve essere un colore HEX valido (#RRGGBB)"),
+  sourceType: z.enum(["default", "url", "custom"]),
+});
+
+export const updateThemeSettingsSchema = insertThemeSettingsSchema.partial();
+
+export type ThemeSettings = typeof themeSettings.$inferSelect;
+export type InsertThemeSettings = z.infer<typeof insertThemeSettingsSchema>;
