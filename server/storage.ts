@@ -8,6 +8,7 @@ import {
   subscriptions,
   pricingLeads,
   themeSettings,
+  onboardingProgress,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -24,6 +25,8 @@ import {
   type InsertPricingLead,
   type ThemeSettings,
   type InsertThemeSettings,
+  type OnboardingProgress,
+  type InsertOnboardingProgress,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
@@ -86,6 +89,9 @@ export interface IStorage {
   getThemeSettings(ambulatorioId: string): Promise<ThemeSettings | undefined>;
   upsertThemeSettings(ambulatorioId: string, settings: InsertThemeSettings): Promise<ThemeSettings>;
   deleteThemeSettings(ambulatorioId: string): Promise<void>;
+  
+  getOnboardingProgress(ambulatorioId: string): Promise<OnboardingProgress | undefined>;
+  upsertOnboardingProgress(ambulatorioId: string, progress: Partial<InsertOnboardingProgress>): Promise<OnboardingProgress>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -500,6 +506,33 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(themeSettings)
       .where(eq(themeSettings.ambulatorioId, ambulatorioId));
+  }
+
+  async getOnboardingProgress(ambulatorioId: string): Promise<OnboardingProgress | undefined> {
+    const [progress] = await db
+      .select()
+      .from(onboardingProgress)
+      .where(eq(onboardingProgress.ambulatorioId, ambulatorioId));
+    return progress || undefined;
+  }
+
+  async upsertOnboardingProgress(ambulatorioId: string, progressData: Partial<InsertOnboardingProgress>): Promise<OnboardingProgress> {
+    const existing = await this.getOnboardingProgress(ambulatorioId);
+
+    if (existing) {
+      const [updated] = await db
+        .update(onboardingProgress)
+        .set({ ...progressData, updatedAt: new Date() })
+        .where(eq(onboardingProgress.ambulatorioId, ambulatorioId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(onboardingProgress)
+        .values({ ambulatorioId, ...progressData } as InsertOnboardingProgress)
+        .returning();
+      return created;
+    }
   }
 }
 
