@@ -2,6 +2,9 @@ import { Card } from "@/components/ui/card";
 import { Users, Calendar, FileText, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
+import OnboardingWizard from "@/components/OnboardingWizard";
+import QuickActions from "@/components/QuickActions";
+import EmptyState from "@/components/EmptyState";
 
 interface Stats {
   totalePazienti: number;
@@ -25,6 +28,9 @@ export default function Dashboard() {
     enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
   });
 
+  const hasPazienti = (stats?.totalePazienti || 0) > 0;
+  const hasAppuntamenti = (stats?.appuntamentiOggi || 0) > 0 || appuntamenti.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -35,6 +41,11 @@ export default function Dashboard() {
           Panoramica dell'attività del tuo ambulatorio
         </p>
       </div>
+
+      {/* Onboarding Wizard */}
+      {ambulatorioId && ambulatorioId !== "default-ambulatorio-id" && (
+        <OnboardingWizard ambulatorioId={ambulatorioId} />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="p-6 hover-elevate active-elevate-2 transition-all" data-testid="card-stat-pazienti">
@@ -94,19 +105,26 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Quick Actions */}
+      <QuickActions hasPazienti={hasPazienti} hasAppuntamenti={hasAppuntamenti} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4 text-card-foreground">
             Prossimi Appuntamenti
           </h2>
           {appuntamenti.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">Nessun appuntamento in programma</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Gli appuntamenti verranno visualizzati qui
-              </p>
-            </div>
+            <EmptyState
+              icon={Calendar}
+              title="Nessun appuntamento oggi"
+              description="Inizia a pianificare le visite per i tuoi pazienti"
+              actionLabel="Crea Appuntamento"
+              actionHref="/dashboard/appuntamenti"
+              secondaryAction={{
+                label: "Vedi Calendario",
+                href: "/dashboard/appuntamenti"
+              }}
+            />
           ) : (
             <div className="space-y-3">
               {appuntamenti.slice(0, 5).map((app) => (
@@ -137,13 +155,23 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold mb-4 text-card-foreground">
             Attività Recente
           </h2>
-          <div className="text-center py-12">
-            <Activity className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">Nessuna attività recente</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Le attività verranno visualizzate qui
-            </p>
-          </div>
+          {!hasPazienti ? (
+            <EmptyState
+              icon={Users}
+              title="Aggiungi il tuo primo paziente"
+              description="Inizia a gestire le cartelle cliniche dei tuoi pazienti in modo digitale e organizzato"
+              actionLabel="Aggiungi Paziente"
+              actionHref="/dashboard/pazienti"
+            />
+          ) : (
+            <EmptyState
+              icon={Activity}
+              title="Nessuna attività recente"
+              description="Le attività verranno visualizzate qui"
+              actionLabel="Vedi Pazienti"
+              actionHref="/dashboard/pazienti"
+            />
+          )}
         </Card>
       </div>
     </div>
