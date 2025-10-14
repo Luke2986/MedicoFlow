@@ -65,11 +65,13 @@ export default function CartellaClinica() {
     }
   }, [location]);
 
-  const { data: pazienti = [] } = useQuery<Paziente[]>({
+  const { data: pazientiResponse } = useQuery<{ pazienti: Paziente[], pagination: any }>({
     queryKey: ["/api/pazienti", ambulatorioId],
-    queryFn: () => fetch(`/api/pazienti?ambulatorioId=${ambulatorioId}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/pazienti?ambulatorioId=${ambulatorioId}&limit=1000`).then(r => r.json()),
     enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
   });
+
+  const pazienti = pazientiResponse?.pazienti || [];
 
   const { data: visite = [], isLoading, isError } = useQuery<Visita[]>({
     queryKey: ["/api/visite", selectedPaziente],
