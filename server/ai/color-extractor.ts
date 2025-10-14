@@ -230,10 +230,19 @@ IMPORTANTE:
       // 5. Genera varianti light/dark usando la libreria color
       const primaryColor = Color(baseColors.primary || '#2563eb');
       
+      // Get HSL values to manipulate lightness more precisely
+      const hsl = primaryColor.hsl();
+      const baseLightness = hsl.color[2]; // L value (0-100)
+      
+      // Calculate light/dark variants with absolute lightness values
+      // This prevents going to pure black (#000000) or pure white (#FFFFFF)
+      const lightLightness = Math.min(baseLightness + 15, 85); // Add 15%, cap at 85%
+      const darkLightness = Math.max(baseLightness - 15, 15);  // Subtract 15%, floor at 15%
+      
       const palette: ColorPalette = {
         primary: primaryColor.hex(),
-        primaryLight: primaryColor.lighten(0.2).hex(),
-        primaryDark: primaryColor.darken(0.2).hex(),
+        primaryLight: primaryColor.lightness(lightLightness).hex(),
+        primaryDark: primaryColor.lightness(darkLightness).hex(),
         accent: baseColors.accent || '#10b981',
         success: baseColors.success || '#22c55e',
         warning: baseColors.warning || '#f59e0b',
