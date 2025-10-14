@@ -7,11 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { PLANS, type PlanKey } from "@shared/features";
+import { PLANS, FEATURE_NAMES, type PlanKey } from "@shared/features";
 import { type Subscription } from "@shared/schema";
-import { Check, Sparkles, X, CheckCircle2 } from "lucide-react";
+import { Check, Sparkles, X, CheckCircle2, Users, Database } from "lucide-react";
 
 const AMBULATORIO_ID = "4fc2e9ce-3c28-4782-8a13-74f128cebee5";
 
@@ -113,81 +115,126 @@ export default function BillingPage() {
   }
 
   const currentPlan = subscription?.piano as PlanKey;
+  const [selectedTab, setSelectedTab] = useState<PlanKey>("PROFESSIONAL");
 
   return (
     <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8" data-testid="page-billing">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         
         <div>
           <h1 className="text-3xl font-bold">Abbonamento e Prezzi</h1>
+          <p className="text-muted-foreground mt-2">
+            Scegli il piano perfetto per il tuo ambulatorio. Switcha tra i piani per vedere le differenze.
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {(Object.keys(PLAN_DETAILS) as Array<keyof typeof PLAN_DETAILS>).map((key) => {
-            const plan = PLAN_DETAILS[key];
-            const isCurrentPlan = currentPlan === key;
+        <Tabs defaultValue="PROFESSIONAL" value={selectedTab} onValueChange={(v) => setSelectedTab(v as PlanKey)} className="w-full">
+          <TabsList className="grid w-full grid-cols-3" data-testid="tabs-plans">
+            <TabsTrigger value="BASE" data-testid="tab-base">
+              Base
+            </TabsTrigger>
+            <TabsTrigger value="PROFESSIONAL" data-testid="tab-professional">
+              <div className="flex items-center gap-2">
+                Professional
+                <Sparkles className="h-3 w-3" />
+              </div>
+            </TabsTrigger>
+            <TabsTrigger value="ENTERPRISE" data-testid="tab-enterprise">
+              Enterprise
+            </TabsTrigger>
+          </TabsList>
+
+          {(Object.keys(PLANS) as Array<PlanKey>).map((planKey) => {
+            const plan = PLANS[planKey];
+            const isCurrentPlan = currentPlan === planKey;
+            const planDetails = PLAN_DETAILS[planKey];
 
             return (
-              <Card
-                key={key}
-                className={`relative ${
-                  plan.popular ? "border-primary shadow-lg" : ""
-                } ${isCurrentPlan ? "bg-accent/30" : ""}`}
-                data-testid={`card-plan-${key.toLowerCase()}`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Più Popolare
-                    </span>
-                  </div>
-                )}
+              <TabsContent key={planKey} value={planKey} className="mt-6">
+                <Card className={`${isCurrentPlan ? "border-primary" : ""}`} data-testid={`card-plan-${planKey.toLowerCase()}`}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-3xl" data-testid={`text-plan-name-${planKey.toLowerCase()}`}>
+                          {planDetails.name}
+                        </CardTitle>
+                        <CardDescription className="mt-2 text-base">
+                          {plan.description}
+                        </CardDescription>
+                      </div>
+                      {isCurrentPlan && (
+                        <Badge variant="default" data-testid="badge-current-plan">
+                          Piano Attuale
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <span className="text-5xl font-bold" data-testid={`text-price-${planKey.toLowerCase()}`}>
+                        €{planDetails.price}
+                      </span>
+                      <span className="text-muted-foreground ml-2 text-lg">{planDetails.period}</span>
+                    </div>
 
-                <CardHeader>
-                  <CardTitle className="text-2xl" data-testid={`text-plan-name-${key.toLowerCase()}`}>
-                    {plan.name}
-                  </CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold" data-testid={`text-price-${key.toLowerCase()}`}>
-                      €{plan.price}
-                    </span>
-                    <span className="text-muted-foreground ml-2">{plan.period}</span>
-                  </div>
-                </CardHeader>
+                    <div className="flex gap-6 mt-6">
+                      <div className="flex items-center gap-2">
+                        <Database className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Pazienti</p>
+                          <p className="text-lg font-semibold" data-testid={`text-patient-limit-${planKey.toLowerCase()}`}>
+                            {plan.limits.pazienti === -1 ? "Illimitati" : plan.limits.pazienti.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Utenti</p>
+                          <p className="text-lg font-semibold" data-testid={`text-user-limit-${planKey.toLowerCase()}`}>
+                            {plan.limits.utenti === -1 ? "Illimitati" : plan.limits.utenti}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
 
-                <CardContent>
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-lg mb-4">Funzionalità Incluse</h3>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {plan.features.map((feature) => (
+                          <div key={feature} className="flex items-start gap-2">
+                            <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                            <span className="text-sm" data-testid={`feature-${feature}`}>
+                              {FEATURE_NAMES[feature] || feature}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
 
-                <CardFooter>
-                  {isCurrentPlan ? (
-                    <Button variant="outline" disabled data-testid={`button-current-${key.toLowerCase()}`} className="w-full">
-                      Piano Attuale
-                    </Button>
-                  ) : (
-                    <Button
-                      variant={plan.popular ? "default" : "outline"}
-                      onClick={() => handlePlanSelect(key)}
-                      data-testid={`button-request-${key.toLowerCase()}`}
-                      className="w-full"
-                    >
-                      Richiedi Demo Gratuita
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
+                  <CardFooter className="flex gap-3">
+                    {isCurrentPlan ? (
+                      <Button variant="outline" disabled data-testid={`button-current-${planKey.toLowerCase()}`} className="flex-1">
+                        Piano Attuale
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="default"
+                        onClick={() => handlePlanSelect(planKey)}
+                        data-testid={`button-request-${planKey.toLowerCase()}`}
+                        className="flex-1"
+                      >
+                        Richiedi Demo Gratuita
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              </TabsContent>
             );
           })}
-        </div>
+        </Tabs>
 
         <div className="text-center pt-8 border-t">
           <p className="text-sm text-muted-foreground mb-4">
