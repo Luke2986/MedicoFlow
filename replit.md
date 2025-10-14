@@ -71,12 +71,20 @@ MedicoFlow is a modern management system designed for Italian medical clinics. I
 
 ## Recent Updates (October 14, 2025)
 
-### AI-Powered Brand Color Customization (Latest - October 14, 2025)
+### AI-Powered Brand Color Customization + WCAG Accessibility (Latest - October 14, 2025)
 - **Dynamic Theme System**: Medical practices can now extract and apply their brand colors from their website URLs using AI-powered color extraction
   - **AI Color Extraction**: OpenAI GPT-4o-mini analyzes website HTML/CSS to extract brand palette (primary, accent, success, warning, error colors)
   - **Live Preview**: Real-time palette visualization with color swatches and interactive button previews before applying
   - **CSS Variables**: Applied theme updates CSS custom properties dynamically across the entire application
   - **Persistence**: Theme settings saved to database per ambulatorio with ThemeProvider context management
+- **WCAG AA Accessibility Compliance** (4.5:1 contrast minimum):
+  - **Dynamic Foreground Calculation**: Implements true WCAG contrast ratio formula: (L1 + 0.05) / (L2 + 0.05)
+  - **Linear RGB Conversion**: Converts RGB to linear values before luminance calculation: `val <= 0.03928 ? val/12.92 : ((val+0.055)/1.055)^2.4`
+  - **Relative Luminance**: WCAG formula: `L = 0.2126*R + 0.7152*G + 0.0722*B`
+  - **Automatic Text Color Selection**: Tests contrast with both white and black, selects option meeting ≥4.5:1 ratio
+  - **Sidebar Protection**: Sidebar colors (--sidebar-primary, --sidebar-accent) NEVER overridden to preserve built-in accessibility
+  - **Edge Cases Handled**: Mid-tone colors (luminance 0.18-0.82) that fail simple threshold now properly evaluated
+  - **E2E Verified**: Tested with #8B7355 (brown), #757575 (gray), #FF6B9D (pink) - all meet WCAG AA standards
 - **Production-Grade SSRF Protection**:
   - **Protocol Validation**: HTTPS-only requirement
   - **DNS Resolution**: Pre-validates hostnames, resolves IPv4/IPv6 addresses before HTTP requests
