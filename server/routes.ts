@@ -20,6 +20,8 @@ import {
   updateThemeSettingsSchema,
 } from "@shared/schema";
 import { extractColorsFromUrl, getDefaultPalette } from "./ai/color-extractor";
+import { renderToStream } from '@react-pdf/renderer';
+import CartellaClinicaPDF from '../client/src/lib/pdf/cartella-pdf';
 
 const statsQuerySchema = z.object({
   ambulatorioId: z.string().uuid("ambulatorioId deve essere un UUID valido"),
@@ -534,6 +536,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(visite);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  app.get("/api/visite/:id/pdf", async (req, res) => {
+    try {
+      const visitaId = req.params.id;
+      
+      // Carica visita
+      const visita = await storage.getVisita(visitaId);
+      if (!visita) {
+        return res.status(404).json({ error: "Visita non trovata" });
+      }
+
+      // Carica paziente
+      const paziente = await storage.getPaziente(visita.pazienteId);
+      if (!paziente) {
+        return res.status(404).json({ error: "Paziente non trovato" });
+      }
+
+      // Carica ambulatorio
+      const ambulatorio = await storage.getAmbulatorio(paziente.ambulatorioId);
+      if (!ambulatorio) {
+        return res.status(404).json({ error: "Ambulatorio non trovato" });
+      }
+
+      // Carica medico per nome
+      const medico = await storage.getUser(visita.medicoId);
+      const medicoNome = medico ? `Dr. ${medico.cognome} ${medico.nome}` : 'Medico Sconosciuto';
+
+      // Genera PDF
+      const pdfStream = await renderToStream(
+        CartellaClinicaPDF({
+          visita,
+          paziente,
+          ambulatorio,
+          medicoNome
+        })
+      );
+
+      // Imposta headers per download
+      const fileName = `Cartella_${paziente.cognome}_${paziente.nome}_${new Date(visita.dataVisita).toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      // Stream PDF to response
+      pdfStream.pipe(res);
+    } catch (error: any) {
+      console.error("Errore generazione PDF:", error);
+      res.status(500).json({ error: "Errore durante la generazione del PDF" });
     }
   });
 
