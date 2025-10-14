@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill, Copy, Download } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill, Copy } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
@@ -340,28 +340,14 @@ export default function CartellaClinica() {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 shrink-0">
-                  <Button 
-                    variant="outline"
-                    onClick={() => {
-                      // Genera PDF dell'intera cartella clinica del paziente
-                      window.open(`/api/pazienti/${selectedPaziente}/cartella-pdf`, '_blank');
-                    }}
-                    data-testid="button-esporta-cartella-pdf"
-                    className="gap-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/30 whitespace-nowrap"
-                  >
-                    <Download className="w-5 h-5" />
-                    Esporta PDF Cartella
-                  </Button>
-                  <Button 
-                    onClick={() => setDialogOpen(true)}
-                    data-testid="button-nuova-visita"
-                    className="gap-2 whitespace-nowrap"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Nuova Visita
-                  </Button>
-                </div>
+                <Button 
+                  onClick={() => setDialogOpen(true)}
+                  data-testid="button-nuova-visita"
+                  className="gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Nuova Visita
+                </Button>
               </div>
             </div>
           </CardContent>

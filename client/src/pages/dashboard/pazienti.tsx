@@ -815,6 +815,17 @@ export default function Pazienti() {
                   </Link>
                   <Button 
                     variant="ghost" 
+                    size="icon"
+                    onClick={() => {
+                      window.open(`/api/pazienti/${paziente.id}/cartella-pdf`, '_blank');
+                    }}
+                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    data-testid={`button-pdf-${paziente.id}`}
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
                     size="icon" 
                     onClick={() => {
                       setSelectedPaziente(paziente);

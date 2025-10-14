@@ -147,13 +147,14 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
       - Loads patient, ambulatorio, ALL visite (chronologically sorted)
       - Content-Disposition: `CartellaClinica_{Cognome}_{Nome}_{Date}.pdf`
     - `GET /api/visite/:id/pdf` - Single visit PDF (legacy route, maintained for compatibility)
-  - **Frontend UI (Responsive Layout)**: 
-    - **Button "Esporta PDF Cartella"** in patient header card (next to "+ Nuova Visita")
-      - Emerald/green border (`border-emerald-600`) to differentiate from primary action
-      - Download icon, data-testid: `button-esporta-cartella-pdf`
-      - Responsive: stacks vertically on mobile (`flex-col`), horizontal on desktop (`sm:flex-row`)
-      - `shrink-0` and `whitespace-nowrap` for consistent visibility
-    - **Removed** individual PDF buttons from visit cards (only Modifica and Elimina remain)
+  - **Frontend UI**: 
+    - **Button "Esporta PDF"** in patient list (`/dashboard/pazienti`) - each patient card has:
+      1. Cartella button (FileText icon) - links to cartella-clinica
+      2. **PDF button (Download icon, emerald/green color)** - downloads complete cartella PDF
+      3. Modifica button (Pencil icon) - edits patient
+      4. Elimina button (Trash2 icon) - deletes patient
+    - PDF button styling: `text-emerald-600` for visual distinction
+    - data-testid: `button-pdf-{pazienteId}`
   - **Type Safety**: Strongly typed props with optional `visite?: Visita[]` for multi-visit support
   - **Defensive Programming**: `safeFormatDate()` helper for robust date parsing with fallbacks
 - **Architecture**:
