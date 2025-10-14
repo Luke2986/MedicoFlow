@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, Plus, Search, Pencil, Trash2, Filter, X, FileText, ArrowUpDown, ArrowUp, ArrowDown, AlertTriangle, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
@@ -38,10 +39,18 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Paziente } from "@shared/schema";
 
+type PazienteEnriched = Paziente & {
+  eta?: number;
+  status?: 'attivo' | 'recente' | 'inattivo';
+  isNuovo?: boolean;
+  ultimaVisita?: string | null;
+};
+
 export default function Pazienti() {
   const { ambulatorioId } = useAmbulatorio();
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     sesso: "",
     citta: "",
@@ -59,10 +68,17 @@ export default function Pazienti() {
   // Debounce per search query
   const debouncedSearch = useDebounce(searchQuery, 500);
 
-  const { data: pazientiData = [], isLoading } = useQuery<Paziente[]>({
-    queryKey: ["/api/pazienti", ambulatorioId, debouncedSearch, filters],
+  const { data, isLoading } = useQuery<{ 
+    pazienti: PazienteEnriched[], 
+    pagination: { page: number, limit: number, total: number, totalPages: number } 
+  }>({
+    queryKey: ["/api/pazienti", ambulatorioId, debouncedSearch, filters, currentPage],
     queryFn: () => {
-      const params = new URLSearchParams({ ambulatorioId });
+      const params = new URLSearchParams({ 
+        ambulatorioId,
+        page: currentPage.toString(),
+        limit: '20'
+      });
       if (debouncedSearch) params.append('search', debouncedSearch);
       if (filters.sesso) params.append('sesso', filters.sesso);
       if (filters.citta) params.append('citta', filters.citta);
@@ -74,6 +90,9 @@ export default function Pazienti() {
     },
     enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
   });
+
+  const pazientiData = data?.pazienti || [];
+  const pagination = data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
 
   // Query subscription per feature flags
   const { data: subscription } = useQuery<Subscription>({
@@ -88,6 +107,16 @@ export default function Pazienti() {
 
   // Check se ha accesso fuzzy search
   const hasFuzzySearch = subscription ? hasFeature(subscription, 'fuzzy-search') : false;
+
+  // Funzione Export CSV
+  const handleExportCSV = () => {
+    const url = `/api/pazienti/export/csv?ambulatorioId=${ambulatorioId}`;
+    window.open(url, '_blank');
+    toast({
+      title: "Export CSV",
+      description: "Il download del file CSV è iniziato",
+    });
+  };
 
   // Sorting pazienti lato client
   const pazienti = useMemo(() => {
@@ -122,6 +151,31 @@ export default function Pazienti() {
     
     return sorted;
   }, [pazientiData, sortBy, sortOrder]);
+
+  // Badge Status
+  const getStatusBadge = (status?: 'attivo' | 'recente' | 'inattivo') => {
+    if (!status) return null;
+    
+    const variants = {
+      attivo: { variant: 'default' as const, label: 'Attivo' },
+      recente: { variant: 'secondary' as const, label: 'Recente' },
+      inattivo: { variant: 'outline' as const, label: 'Inattivo' },
+    };
+    
+    const config = variants[status];
+    return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
+  };
+
+  // Reset page quando cambiano filtri o search
+  const handleFiltersChange = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -246,16 +300,26 @@ export default function Pazienti() {
             Pazienti
           </h1>
           <p className="text-muted-foreground">
-            Gestisci l'anagrafica dei tuoi pazienti
+            {pagination.total} pazienti totali
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" data-testid="button-add-patient">
-              <Plus className="w-4 h-4" />
-              Nuovo Paziente
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportCSV} 
+            className="gap-2"
+            data-testid="button-export-csv"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2" data-testid="button-add-patient">
+                <Plus className="w-4 h-4" />
+                Nuovo Paziente
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Aggiungi Nuovo Paziente</DialogTitle>
@@ -355,6 +419,7 @@ export default function Pazienti() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Edit Dialog */}
@@ -522,7 +587,7 @@ export default function Pazienti() {
                 placeholder="Cerca per nome, cognome o codice fiscale..."
                 className="pl-10"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 data-testid="input-search-patients"
               />
             </div>
@@ -540,7 +605,7 @@ export default function Pazienti() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setFilters({ sesso: "", citta: "", provincia: "", etaMin: "", etaMax: "" })}
+                onClick={() => handleFiltersChange({ sesso: "", citta: "", provincia: "", etaMin: "", etaMax: "" })}
                 className="gap-2"
                 data-testid="button-clear-filters"
               >
@@ -557,7 +622,7 @@ export default function Pazienti() {
                   <Label>Sesso</Label>
                   <Select
                     value={filters.sesso || undefined}
-                    onValueChange={(value) => setFilters({ ...filters, sesso: value || "" })}
+                    onValueChange={(value) => handleFiltersChange({ ...filters, sesso: value || "" })}
                   >
                     <SelectTrigger data-testid="select-filter-sesso">
                       <SelectValue placeholder="Tutti" />
@@ -574,7 +639,7 @@ export default function Pazienti() {
                   <Input
                     placeholder="Es: Milano"
                     value={filters.citta}
-                    onChange={(e) => setFilters({ ...filters, citta: e.target.value })}
+                    onChange={(e) => handleFiltersChange({ ...filters, citta: e.target.value })}
                     data-testid="input-filter-citta"
                   />
                 </div>
@@ -586,7 +651,7 @@ export default function Pazienti() {
                     maxLength={2}
                     className="uppercase"
                     value={filters.provincia}
-                    onChange={(e) => setFilters({ ...filters, provincia: e.target.value.toUpperCase() })}
+                    onChange={(e) => handleFiltersChange({ ...filters, provincia: e.target.value.toUpperCase() })}
                     data-testid="input-filter-provincia"
                   />
                 </div>
@@ -599,7 +664,7 @@ export default function Pazienti() {
                     max="120"
                     placeholder="Es: 18"
                     value={filters.etaMin}
-                    onChange={(e) => setFilters({ ...filters, etaMin: e.target.value })}
+                    onChange={(e) => handleFiltersChange({ ...filters, etaMin: e.target.value })}
                     data-testid="input-filter-eta-min"
                   />
                 </div>
@@ -612,7 +677,7 @@ export default function Pazienti() {
                     max="120"
                     placeholder="Es: 65"
                     value={filters.etaMax}
-                    onChange={(e) => setFilters({ ...filters, etaMax: e.target.value })}
+                    onChange={(e) => handleFiltersChange({ ...filters, etaMax: e.target.value })}
                     data-testid="input-filter-eta-max"
                   />
                 </div>
@@ -722,10 +787,17 @@ export default function Pazienti() {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-card-foreground hover:text-primary transition-colors">
-                      {paziente.cognome} {paziente.nome}
-                    </p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-card-foreground hover:text-primary transition-colors">
+                        {paziente.cognome} {paziente.nome}
+                      </p>
+                      {paziente.isNuovo && (
+                        <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700">Nuovo</Badge>
+                      )}
+                      {paziente.status && getStatusBadge(paziente.status)}
+                    </div>
                     <p className="text-sm text-muted-foreground truncate">
+                      {paziente.eta && `${paziente.eta} anni • `}
                       CF: {paziente.codiceFiscale} • Tel: {paziente.telefono}
                     </p>
                   </div>
@@ -766,6 +838,37 @@ export default function Pazienti() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Paginazione */}
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-4 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Pagina {pagination.page} di {pagination.totalPages} ({pagination.total} pazienti)
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={pagination.page === 1}
+                data-testid="button-prev-page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Precedente
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+                disabled={pagination.page === pagination.totalPages}
+                data-testid="button-next-page"
+              >
+                Successiva
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
       </Card>

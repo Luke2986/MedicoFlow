@@ -85,3 +85,25 @@ The architecture is modular, separating frontend (`client/`), backend (`server/`
 - **Cleanup**: Removed duplicates via SQL, kept only 3 with real data
 - **Prevention**: Fixed `server/seed.ts` to check `ambulatori.length` (not `pazienti.length`)
 - **Result**: Database clean, no future duplicates
+
+### Patient List Enhancement - Pagination, Status Badges & CSV Export (Oct 14, 2025)
+- **Feature**: Enhanced patient list with pagination, visual status indicators, and data export capabilities
+- **Implementation**:
+  - **Backend Pagination**: Route `/api/pazienti` now returns paginated results (20 items/page) with metadata (total, totalPages, page, limit)
+  - **Status Calculation**: Server-side logic calculates patient status based on last visit:
+    - **Nuovo** (green badge): No visits recorded
+    - **Attivo** (default badge): Last visit within 3 months
+    - **Recente** (secondary badge): Last visit 3-6 months ago
+    - **Inattivo** (outline badge): Last visit over 6 months ago
+  - **Age Display**: Calculated age displayed alongside patient info (e.g., "25 anni")
+  - **CSV Export**: New route `/api/pazienti/export/csv` generates downloadable CSV with UTF-8 BOM for Excel compatibility
+  - **Route Ordering Fix**: Corrected Express route order - specific routes (`/export/csv`, `/codice-fiscale/:cf`) now placed BEFORE parametric route (`/:id`) to prevent route matching conflicts
+  - **Frontend UI**: 
+    - Pagination controls (Precedente/Successiva buttons) with page indicator
+    - Visual status badges using shadcn Badge component
+    - Export CSV button in header with download icon
+    - Total patient count display
+    - Auto page reset when search/filters change
+- **Testing**: E2E test passed ✅ - verified pagination (26 patients → 2 pages: 20+6), badge display, CSV download with proper headers
+- **Performance Note**: For large datasets, consider optimizing per-patient visit lookups (potential N+1 queries)
+- **Files Modified**: `server/routes.ts`, `client/src/pages/dashboard/pazienti.tsx`

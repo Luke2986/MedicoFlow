@@ -184,16 +184,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/pazienti", async (req, res) => {
     try {
-      const { ambulatorioId, search, sesso, citta, provincia, etaMin, etaMax } = req.query;
+      const { ambulatorioId, search, sesso, citta, provincia, etaMin, etaMax, page, limit } = req.query;
       
       if (!ambulatorioId || typeof ambulatorioId !== 'string') {
         return res.status(400).json({ error: "ambulatorioId richiesto" });
       }
 
+      // Paginazione
+      const currentPage = page && typeof page === 'string' ? parseInt(page, 10) : 1;
+      const pageSize = limit && typeof limit === 'string' ? parseInt(limit, 10) : 20;
+      const skip = (currentPage - 1) * pageSize;
+
       // Se ci sono filtri avanzati, usa searchPazientiAdvanced
       const hasAdvancedFilters = sesso || citta || provincia || etaMin || etaMax;
       
-      let pazienti;
+      let allPazienti;
       if (search || hasAdvancedFilters) {
         const filters: any = {};
         if (search && typeof search === 'string') filters.query = search;
@@ -217,20 +222,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        pazienti = await storage.searchPazientiAdvanced(ambulatorioId, filters);
+        allPazienti = await storage.searchPazientiAdvanced(ambulatorioId, filters);
       } else {
-        pazienti = await storage.getPazienti(ambulatorioId);
+        allPazienti = await storage.getPazienti(ambulatorioId);
       }
+
+      const total = allPazienti.length;
+      const pazienti = allPazienti.slice(skip, skip + pageSize);
+
+      // Arricchisci ogni paziente con età, status e ultima visita
+      const pazientiEnriched = await Promise.all(
+        pazienti.map(async (p) => {
+          const visite = await storage.getVisiteByPaziente(p.id);
+          const ultimaVisita = visite.length > 0 
+            ? visite.sort((a, b) => new Date(b.dataVisita).getTime() - new Date(a.dataVisita).getTime())[0]
+            : null;
+
+          // Calcola età
+          const birthDate = new Date(p.dataNascita);
+          const today = new Date();
+          let eta = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            eta--;
+          }
+
+          // Calcola status
+          let status = 'inattivo';
+          let isNuovo = false;
+
+          // È nuovo se creato negli ultimi 7 giorni
+          const createdAt = new Date(p.createdAt);
+          const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+          isNuovo = daysSinceCreation <= 7;
+
+          if (ultimaVisita) {
+            const daysSinceLastVisit = Math.floor(
+              (Date.now() - new Date(ultimaVisita.dataVisita).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            
+            if (daysSinceLastVisit < 30) {
+              status = 'attivo';
+            } else if (daysSinceLastVisit < 90) {
+              status = 'recente';
+            }
+          }
+
+          return {
+            ...p,
+            eta,
+            status,
+            isNuovo,
+            ultimaVisita: ultimaVisita?.dataVisita || null,
+          };
+        })
+      );
       
-      res.json(pazienti);
+      res.json({
+        pazienti: pazientiEnriched,
+        pagination: {
+          page: currentPage,
+          limit: pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      });
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
     }
   });
 
-  app.get("/api/pazienti/:id", async (req, res) => {
+  app.get("/api/pazienti/export/csv", async (req, res) => {
     try {
-      const paziente = await storage.getPaziente(req.params.id);
+      const { ambulatorioId } = req.query;
+      
+      if (!ambulatorioId || typeof ambulatorioId !== 'string') {
+        return res.status(400).json({ error: "ambulatorioId richiesto" });
+      }
+
+      const pazienti = await storage.getPazienti(ambulatorioId);
+
+      // CSV Headers
+      const headers = [
+        'Nome',
+        'Cognome',
+        'Codice Fiscale',
+        'Data Nascita',
+        'Luogo Nascita',
+        'Sesso',
+        'Indirizzo',
+        'Città',
+        'Provincia',
+        'CAP',
+        'Telefono',
+        'Email',
+        'Note'
+      ].join(',');
+
+      // CSV Rows
+      const rows = pazienti.map(p => {
+        const dataNascita = new Date(p.dataNascita).toLocaleDateString('it-IT');
+        return [
+          `"${p.nome}"`,
+          `"${p.cognome}"`,
+          `"${p.codiceFiscale}"`,
+          `"${dataNascita}"`,
+          `"${p.luogoNascita}"`,
+          `"${p.sesso}"`,
+          `"${p.indirizzo}"`,
+          `"${p.citta}"`,
+          `"${p.provincia}"`,
+          `"${p.cap}"`,
+          `"${p.telefono}"`,
+          `"${p.email || ''}"`,
+          `"${p.note || ''}"`
+        ].join(',');
+      });
+
+      const csv = [headers, ...rows].join('\n');
+      const filename = `pazienti-${new Date().toISOString().split('T')[0]}.csv`;
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send('\uFEFF' + csv); // BOM per Excel
+    } catch (error) {
+      console.error('Errore export CSV:', error);
+      res.status(500).json({ error: "Errore durante l'export" });
+    }
+  });
+
+  app.get("/api/pazienti/codice-fiscale/:cf", async (req, res) => {
+    try {
+      const paziente = await storage.getPazienteByCodiceFiscale(req.params.cf);
       if (!paziente) {
         return res.status(404).json({ error: "Paziente non trovato" });
       }
@@ -240,9 +363,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/pazienti/codice-fiscale/:cf", async (req, res) => {
+  app.get("/api/pazienti/:id", async (req, res) => {
     try {
-      const paziente = await storage.getPazienteByCodiceFiscale(req.params.cf);
+      const paziente = await storage.getPaziente(req.params.id);
       if (!paziente) {
         return res.status(404).json({ error: "Paziente non trovato" });
       }
