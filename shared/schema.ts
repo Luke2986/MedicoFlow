@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, index, uniqueIndex, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -123,6 +123,21 @@ export const subscriptions = pgTable("subscriptions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const onboardingProgress = pgTable("onboarding_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().unique().references(() => ambulatori.id),
+  profileCompleted: boolean("profile_completed").notNull().default(false),
+  firstPatientAdded: boolean("first_patient_added").notNull().default(false),
+  firstAppointmentAdded: boolean("first_appointment_added").notNull().default(false),
+  themeCustomized: boolean("theme_customized").notNull().default(false),
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  ambulatorioIdx: index("onboarding_ambulatorio_idx").on(table.ambulatorioId),
+}));
+
 export const ambulatoriRelations = relations(ambulatori, ({ many, one }) => ({
   users: many(users),
   pazienti: many(pazienti),
@@ -131,6 +146,10 @@ export const ambulatoriRelations = relations(ambulatori, ({ many, one }) => ({
   subscription: one(subscriptions, {
     fields: [ambulatori.id],
     references: [subscriptions.ambulatorioId],
+  }),
+  onboardingProgress: one(onboardingProgress, {
+    fields: [ambulatori.id],
+    references: [onboardingProgress.ambulatorioId],
   }),
 }));
 
@@ -193,6 +212,13 @@ export const visiteRelations = relations(visite, ({ one }) => ({
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   ambulatorio: one(ambulatori, {
     fields: [subscriptions.ambulatorioId],
+    references: [ambulatori.id],
+  }),
+}));
+
+export const onboardingProgressRelations = relations(onboardingProgress, ({ one }) => ({
+  ambulatorio: one(ambulatori, {
+    fields: [onboardingProgress.ambulatorioId],
     references: [ambulatori.id],
   }),
 }));
@@ -336,6 +362,17 @@ export const updateSubscriptionSchema = insertSubscriptionSchema.partial();
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+export const insertOnboardingProgressSchema = createInsertSchema(onboardingProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateOnboardingProgressSchema = insertOnboardingProgressSchema.partial();
+
+export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
+export type InsertOnboardingProgress = z.infer<typeof insertOnboardingProgressSchema>;
 
 export const insertAIUsageSchema = createInsertSchema(aiUsage).omit({
   id: true,
