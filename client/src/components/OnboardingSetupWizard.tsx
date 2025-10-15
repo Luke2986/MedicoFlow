@@ -44,10 +44,6 @@ export default function OnboardingSetupWizard({ ambulatorioId, open, onComplete 
   const updateAmbulatorioMutation = useMutation({
     mutationFn: async (specializationId: string) => {
       return await apiRequest("PATCH", `/api/ambulatori/${ambulatorioId}`, { specializationId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/ambulatori', ambulatorioId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/ambulatori-list'] });
     }
   });
 
@@ -55,10 +51,17 @@ export default function OnboardingSetupWizard({ ambulatorioId, open, onComplete 
     if (selectedSpecialization) {
       try {
         await updateAmbulatorioMutation.mutateAsync(selectedSpecialization);
+        
+        // Wait for queries to invalidate and refetch
+        await queryClient.invalidateQueries({ queryKey: ['/api/ambulatori', ambulatorioId] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/ambulatori-list'] });
+        
         toast({
           title: "Onboarding completato!",
           description: "Il tuo ambulatorio è ora configurato correttamente."
         });
+        
+        // Close wizard after successful save
         onComplete();
       } catch (error) {
         toast({
@@ -265,7 +268,7 @@ export default function OnboardingSetupWizard({ ambulatorioId, open, onComplete 
   const canProceed = currentStep === 2 ? selectedSpecialization !== null : true;
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onComplete()}>
       <DialogContent className="sm:max-w-[600px]" data-testid="dialog-onboarding-wizard">
         <DialogHeader>
           <DialogTitle className="text-xl">{steps[currentStep].title}</DialogTitle>
