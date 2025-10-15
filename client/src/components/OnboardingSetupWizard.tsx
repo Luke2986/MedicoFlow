@@ -52,7 +52,7 @@ export default function OnboardingSetupWizard({ ambulatorioId, open, onComplete 
       try {
         await updateAmbulatorioMutation.mutateAsync(selectedSpecialization);
         
-        // Wait for queries to invalidate and refetch
+        // Invalidate queries to refresh data
         await queryClient.invalidateQueries({ queryKey: ['/api/ambulatori', ambulatorioId] });
         await queryClient.invalidateQueries({ queryKey: ['/api/ambulatori-list'] });
         

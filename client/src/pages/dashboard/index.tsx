@@ -19,6 +19,7 @@ interface Stats {
 export default function Dashboard() {
   const { ambulatorioId } = useAmbulatorio();
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [setupCompleted, setSetupCompleted] = useState(false);
 
   const { data: ambulatorio } = useQuery<Ambulatorio>({
     queryKey: ["/api/ambulatori", ambulatorioId],
@@ -38,14 +39,16 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (ambulatorio && !ambulatorio.specializationId) {
+    // Only show wizard if ambulatorio needs setup AND user hasn't manually completed it
+    if (ambulatorio && !ambulatorio.specializationId && !setupCompleted) {
       setShowSetupWizard(true);
     } else {
       setShowSetupWizard(false);
     }
-  }, [ambulatorio]);
+  }, [ambulatorio, setupCompleted]);
 
   const handleSetupComplete = () => {
+    setSetupCompleted(true);
     setShowSetupWizard(false);
   };
 
