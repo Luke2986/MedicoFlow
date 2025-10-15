@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { type Ambulatorio } from "@shared/schema";
 import { useState, useEffect } from "react";
 
@@ -26,7 +27,8 @@ export default function AmbulatorioPage() {
     email: "",
     piva: "",
     regione: "",
-    specializzazione: ""
+    specializzazione: "",
+    specializationId: ""
   });
 
   const { data: ambulatorio, isLoading } = useQuery<Ambulatorio>({
@@ -34,6 +36,15 @@ export default function AmbulatorioPage() {
     queryFn: async () => {
       const res = await fetch(`/api/ambulatori/${AMBULATORIO_ID}`);
       if (!res.ok) throw new Error("Errore caricamento ambulatorio");
+      return res.json();
+    }
+  });
+
+  const { data: specializations = [], isLoading: loadingSpecs } = useQuery<any[]>({
+    queryKey: ["/api/specializations"],
+    queryFn: async () => {
+      const res = await fetch("/api/specializations");
+      if (!res.ok) throw new Error("Errore caricamento specializzazioni");
       return res.json();
     }
   });
@@ -51,7 +62,8 @@ export default function AmbulatorioPage() {
         email: ambulatorio.email,
         piva: ambulatorio.piva,
         regione: ambulatorio.regione,
-        specializzazione: ambulatorio.specializzazione
+        specializzazione: ambulatorio.specializzazione,
+        specializationId: ambulatorio.specializationId || ""
       });
     }
   }, [ambulatorio]);
@@ -132,13 +144,28 @@ export default function AmbulatorioPage() {
 
             <div className="md:col-span-2">
               <Label htmlFor="specializzazione">Specializzazione</Label>
-              <Input
-                id="specializzazione"
-                data-testid="input-specializzazione"
-                value={formData.specializzazione}
-                onChange={(e) => setFormData(prev => ({ ...prev, specializzazione: e.target.value }))}
-                required
-              />
+              <Select
+                value={formData.specializationId}
+                onValueChange={(value) => {
+                  const selectedSpec = specializations.find(s => s.id === value);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    specializationId: value,
+                    specializzazione: selectedSpec?.nome || ""
+                  }));
+                }}
+              >
+                <SelectTrigger data-testid="select-specializzazione">
+                  <SelectValue placeholder="Seleziona una specializzazione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {specializations.map((spec) => (
+                    <SelectItem key={spec.id} value={spec.id} data-testid={`option-spec-${spec.slug}`}>
+                      {spec.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
