@@ -38,15 +38,15 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const setupCompleted = localStorage.getItem('setup_wizard_completed');
-    if (ambulatorio && !ambulatorio.specializationId && !setupCompleted) {
+    if (ambulatorio && !ambulatorio.specializationId) {
       setShowSetupWizard(true);
+    } else {
+      setShowSetupWizard(false);
     }
   }, [ambulatorio]);
 
   const handleSetupComplete = () => {
     setShowSetupWizard(false);
-    localStorage.setItem('setup_wizard_completed', 'true');
   };
 
   const hasPazienti = (stats?.totalePazienti || 0) > 0;
