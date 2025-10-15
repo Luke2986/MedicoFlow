@@ -92,11 +92,11 @@ export default function PazienteDettaglio() {
   const hasAllergie = paziente.allergie && paziente.allergie.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-muted-foreground" data-testid="breadcrumb-nav">
+      <nav className="flex items-center space-x-2 text-xs sm:text-sm text-muted-foreground" data-testid="breadcrumb-nav">
         <Link href="/dashboard/pazienti" className="hover:text-foreground hover-elevate px-2 py-1 rounded">
-          <ArrowLeft className="h-4 w-4 inline mr-1" />
+          <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 inline mr-1" />
           Pazienti
         </Link>
         <span>/</span>
@@ -107,10 +107,10 @@ export default function PazienteDettaglio() {
 
       {/* Header Paziente Fisso */}
       <Card data-testid="card-header-paziente">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div className="space-y-2">
-              <CardTitle className="text-3xl font-bold">
+        <CardHeader className="pb-3 sm:pb-4">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 sm:gap-4">
+            <div className="space-y-1 sm:space-y-2">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {paziente.cognome} {paziente.nome}
               </CardTitle>
               <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">

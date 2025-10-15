@@ -9,6 +9,7 @@ import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useState, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useIsMobile } from "@/hooks/use-mobile";
 import AutocompleteSearch from "@/components/AutocompleteSearch";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { hasFeature } from "@shared/features";
@@ -48,6 +49,7 @@ type PazienteEnriched = Paziente & {
 
 export default function Pazienti() {
   const { ambulatorioId } = useAmbulatorio();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -294,13 +296,13 @@ export default function Pazienti() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-pazienti-title">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2" data-testid="text-pazienti-title">
             Pazienti
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             {pagination.total} pazienti totali
           </p>
         </div>
@@ -308,17 +310,19 @@ export default function Pazienti() {
           <Button 
             variant="outline" 
             onClick={handleExportCSV} 
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-initial"
             data-testid="button-export-csv"
           >
             <Download className="w-4 h-4" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2" data-testid="button-add-patient">
+              <Button className="gap-2 flex-1 sm:flex-initial" data-testid="button-add-patient">
                 <Plus className="w-4 h-4" />
-                Nuovo Paziente
+                <span className="hidden sm:inline">Nuovo Paziente</span>
+                <span className="sm:hidden">Nuovo</span>
               </Button>
             </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -579,41 +583,44 @@ export default function Pazienti() {
         />
       )}
 
-      <Card className="p-6">
-        <div className="space-y-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+      <Card className="p-3 sm:p-6">
+        <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Cerca per nome, cognome o codice fiscale..."
+                placeholder="Cerca paziente..."
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 data-testid="input-search-patients"
               />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
-              data-testid="button-toggle-filters"
-            >
-              <Filter className="w-4 h-4" />
-              {showFilters ? 'Nascondi Filtri' : 'Filtri Avanzati'}
-            </Button>
-            {(filters.sesso || filters.citta || filters.provincia || filters.etaMin || filters.etaMax) && (
+            <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => handleFiltersChange({ sesso: "", citta: "", provincia: "", etaMin: "", etaMax: "" })}
-                className="gap-2"
-                data-testid="button-clear-filters"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2 flex-1 sm:flex-initial"
+                data-testid="button-toggle-filters"
               >
-                <X className="w-4 h-4" />
-                Azzera Filtri
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline">{showFilters ? 'Nascondi' : 'Filtri'}</span>
+                <span className="sm:hidden">Filtri</span>
               </Button>
-            )}
+              {(filters.sesso || filters.citta || filters.provincia || filters.etaMin || filters.etaMax) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFiltersChange({ sesso: "", citta: "", provincia: "", etaMin: "", etaMax: "" })}
+                  className="gap-1 sm:gap-2"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="w-4 h-4" />
+                  <span className="hidden sm:inline">Azzera</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           <Collapsible open={showFilters}>
@@ -689,9 +696,9 @@ export default function Pazienti() {
 
         {/* Barra ordinamento */}
         {pazienti.length > 0 && (
-          <div className="flex items-center gap-2 pb-4 border-b">
-            <span className="text-sm text-muted-foreground">Ordina per:</span>
-            <div className="flex gap-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 sm:pb-4 border-b">
+            <span className="text-xs sm:text-sm text-muted-foreground">Ordina per:</span>
+            <div className="flex gap-1.5 flex-wrap">
               <Button
                 variant={sortBy === 'cognome' ? 'default' : 'outline'}
                 size="sm"
@@ -703,7 +710,7 @@ export default function Pazienti() {
                     setSortOrder('asc');
                   }
                 }}
-                className="gap-1"
+                className="gap-1 text-xs sm:text-sm"
                 data-testid="button-sort-cognome"
               >
                 Nome
@@ -722,10 +729,11 @@ export default function Pazienti() {
                     setSortOrder('asc');
                   }
                 }}
-                className="gap-1"
+                className="gap-1 text-xs sm:text-sm"
                 data-testid="button-sort-data"
               >
-                Data Nascita
+                <span className="hidden sm:inline">Data Nascita</span>
+                <span className="sm:hidden">Data</span>
                 {sortBy === 'dataNascita' && (
                   sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
                 )}
@@ -741,7 +749,7 @@ export default function Pazienti() {
                     setSortOrder('asc');
                   }
                 }}
-                className="gap-1"
+                className="gap-1 text-xs sm:text-sm"
                 data-testid="button-sort-citta"
               >
                 Città
@@ -778,17 +786,17 @@ export default function Pazienti() {
             {pazienti.map((paziente) => (
               <div 
                 key={paziente.id} 
-                className="flex items-center justify-between p-4 rounded-md border border-border hover-elevate active-elevate-2"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-md border border-border hover-elevate active-elevate-2 gap-3"
                 data-testid={`card-patient-${paziente.id}`}
               >
-                <Link href={`/dashboard/pazienti/${paziente.id}`} className="flex items-center gap-4 flex-1 min-w-0">
+                <Link href={`/dashboard/pazienti/${paziente.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-semibold text-primary">
                       {paziente.nome[0]}{paziente.cognome[0]}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
                       <p className="font-semibold text-card-foreground hover:text-primary transition-colors">
                         {paziente.cognome} {paziente.nome}
                       </p>
@@ -797,56 +805,90 @@ export default function Pazienti() {
                       )}
                       {paziente.status && getStatusBadge(paziente.status)}
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
                       {paziente.eta && `${paziente.eta} anni • `}
-                      CF: {paziente.codiceFiscale} • Tel: {paziente.telefono}
+                      CF: {paziente.codiceFiscale}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate sm:hidden">
+                      Tel: {paziente.telefono}
                     </p>
                   </div>
                 </Link>
-                <div className="flex items-center gap-2">
-                  <Link href={`/dashboard/cartella-clinica?pazienteId=${paziente.id}`}>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      data-testid={`button-cartella-${paziente.id}`}
-                    >
-                      <FileText className="w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => {
-                      window.open(`/api/pazienti/${paziente.id}/cartella-pdf`, '_blank');
-                    }}
-                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                    data-testid={`button-pdf-${paziente.id}`}
-                  >
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => {
-                      setSelectedPaziente(paziente);
-                      setEditDialogOpen(true);
-                    }}
-                    data-testid={`button-edit-${paziente.id}`}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => {
-                      if (confirm(`Eliminare il paziente ${paziente.nome} ${paziente.cognome}?`)) {
-                        deleteMutation.mutate(paziente.id);
-                      }
-                    }}
-                    data-testid={`button-delete-${paziente.id}`}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                  {isMobile ? (
+                    /* Mobile: solo PDF e Edit */
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          window.open(`/api/pazienti/${paziente.id}/cartella-pdf`, '_blank');
+                        }}
+                        className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        data-testid={`button-pdf-${paziente.id}`}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                          setSelectedPaziente(paziente);
+                          setEditDialogOpen(true);
+                        }}
+                        data-testid={`button-edit-${paziente.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    /* Desktop: tutti i button */
+                    <>
+                      <Link href={`/dashboard/cartella-clinica?pazienteId=${paziente.id}`}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          data-testid={`button-cartella-${paziente.id}`}
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          window.open(`/api/pazienti/${paziente.id}/cartella-pdf`, '_blank');
+                        }}
+                        className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        data-testid={`button-pdf-${paziente.id}`}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                          setSelectedPaziente(paziente);
+                          setEditDialogOpen(true);
+                        }}
+                        data-testid={`button-edit-${paziente.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          if (confirm(`Eliminare il paziente ${paziente.nome} ${paziente.cognome}?`)) {
+                            deleteMutation.mutate(paziente.id);
+                          }
+                        }}
+                        data-testid={`button-delete-${paziente.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

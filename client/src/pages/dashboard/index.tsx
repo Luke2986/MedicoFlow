@@ -32,12 +32,12 @@ export default function Dashboard() {
   const hasAppuntamenti = (stats?.appuntamentiOggi || 0) > 0 || appuntamenti.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-dashboard-title">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2" data-testid="text-dashboard-title">
           Dashboard
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground">
           Panoramica dell'attività del tuo ambulatorio
         </p>
       </div>
