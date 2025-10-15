@@ -1106,6 +1106,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Specializations API
+  app.get("/api/specializations", async (_req, res) => {
+    try {
+      const specializations = await storage.getAllSpecializations();
+      res.json(specializations);
+    } catch (error) {
+      console.error('Errore get specializations:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
+  app.get("/api/specializations/:id", async (req, res) => {
+    try {
+      const specialization = await storage.getSpecialization(req.params.id);
+      if (!specialization) {
+        return res.status(404).json({ error: 'Specializzazione non trovata' });
+      }
+      res.json(specialization);
+    } catch (error) {
+      console.error('Errore get specialization:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
+  app.get("/api/specializations/slug/:slug", async (req, res) => {
+    try {
+      const specialization = await storage.getSpecializationBySlug(req.params.slug);
+      if (!specialization) {
+        return res.status(404).json({ error: 'Specializzazione non trovata' });
+      }
+      res.json(specialization);
+    } catch (error) {
+      console.error('Errore get specialization by slug:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
+  // User Preferences API
+  app.get("/api/preferences/:userId", async (req, res) => {
+    try {
+      const preferences = await storage.getUserPreferences(req.params.userId);
+      if (!preferences) {
+        return res.status(404).json({ error: 'Preferenze non trovate' });
+      }
+      res.json(preferences);
+    } catch (error) {
+      console.error('Errore get preferences:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
+  app.post("/api/preferences/:userId", async (req, res) => {
+    try {
+      const preferences = await storage.upsertUserPreferences(req.params.userId, req.body);
+      res.json(preferences);
+    } catch (error) {
+      console.error('Errore upsert preferences:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
+  app.delete("/api/preferences/:userId", async (req, res) => {
+    try {
+      await storage.deleteUserPreferences(req.params.userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Errore delete preferences:', error);
+      res.status(500).json({ error: 'Errore server' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

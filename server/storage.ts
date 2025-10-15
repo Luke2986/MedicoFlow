@@ -9,6 +9,8 @@ import {
   pricingLeads,
   themeSettings,
   onboardingProgress,
+  specializations,
+  userPreferences,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -27,6 +29,10 @@ import {
   type InsertThemeSettings,
   type OnboardingProgress,
   type InsertOnboardingProgress,
+  type Specialization,
+  type InsertSpecialization,
+  type UserPreferences,
+  type InsertUserPreferences,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
@@ -92,6 +98,14 @@ export interface IStorage {
   
   getOnboardingProgress(ambulatorioId: string): Promise<OnboardingProgress | undefined>;
   upsertOnboardingProgress(ambulatorioId: string, progress: Partial<InsertOnboardingProgress>): Promise<OnboardingProgress>;
+  
+  getAllSpecializations(): Promise<Specialization[]>;
+  getSpecialization(id: string): Promise<Specialization | undefined>;
+  getSpecializationBySlug(slug: string): Promise<Specialization | undefined>;
+  
+  getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
+  upsertUserPreferences(userId: string, preferences: Partial<InsertUserPreferences>): Promise<UserPreferences>;
+  deleteUserPreferences(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -533,6 +547,59 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  async getAllSpecializations(): Promise<Specialization[]> {
+    return await db.select().from(specializations).orderBy(specializations.nome);
+  }
+
+  async getSpecialization(id: string): Promise<Specialization | undefined> {
+    const [specialization] = await db
+      .select()
+      .from(specializations)
+      .where(eq(specializations.id, id));
+    return specialization || undefined;
+  }
+
+  async getSpecializationBySlug(slug: string): Promise<Specialization | undefined> {
+    const [specialization] = await db
+      .select()
+      .from(specializations)
+      .where(eq(specializations.slug, slug));
+    return specialization || undefined;
+  }
+
+  async getUserPreferences(userId: string): Promise<UserPreferences | undefined> {
+    const [preferences] = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+    return preferences || undefined;
+  }
+
+  async upsertUserPreferences(userId: string, preferencesData: Partial<InsertUserPreferences>): Promise<UserPreferences> {
+    const existing = await this.getUserPreferences(userId);
+
+    if (existing) {
+      const [updated] = await db
+        .update(userPreferences)
+        .set({ ...preferencesData, updatedAt: new Date() })
+        .where(eq(userPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userPreferences)
+        .values({ userId, ...preferencesData } as InsertUserPreferences)
+        .returning();
+      return created;
+    }
+  }
+
+  async deleteUserPreferences(userId: string): Promise<void> {
+    await db
+      .delete(userPreferences)
+      .where(eq(userPreferences.userId, userId));
   }
 }
 
