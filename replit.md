@@ -27,7 +27,9 @@ The frontend is built with React 18, TypeScript, Wouter for routing, and TanStac
 - **AI-Powered Brand Color Customization**: Extracts brand colors from website URLs using Groq (llama-3.3-70b-versatile) for dynamic, WCAG AA compliant theme generation.
 - **Settings Menu**: Manages clinic data, billing, team, notifications, and privacy.
 - **Subscription & Pricing Tiers**: Feature-flagged BASE, PROFESSIONAL, and ENTERPRISE access levels with a lead capture system and interactive plan switching UI.
-- **Onboarding System**: Intelligent wizard with auto-progress tracking and context-aware quick actions.
+- **Onboarding System**: **Dual onboarding experience** with OnboardingSetupWizard (first-time interactive 4-step wizard: Welcome → Ambulatorio → Specialization → Tutorial) and OnboardingWizard (progress tracker for returning users). Setup wizard appears only for users without specializationId and guides through initial clinic configuration.
+- **Medical Specialization Templates**: Database-driven specialization system with 8 Italian medical specialties (Medicina Generale, Cardiologia, Pediatria, Dermatologia, Ortopedia, Ginecologia, Oculistica, Otorinolaringoiatria). Each includes defaultKPIs, cartellaTemplate (anamnesi/diagnosis/therapy), parametriVitali, quickActions, and diagnosiFrequenti stored as JSON.
+- **User Preferences System**: Comprehensive preferences panel in settings with theme control (light/dark/auto with real-time document.documentElement manipulation), notification toggles (email/SMS/push/reminder24h), dashboardLayout array, and tableSettings object (density: compact/comfortable/spacious, pagination: 10/25/50 rows). Full integration with backend API using upsert semantics for concurrent user safety.
 - **Mobile Responsiveness**: Full mobile optimization using `useIsMobile()` hook for conditional rendering, responsive layouts (`flex-col sm:flex-row`), shortened button labels, and mobile-first spacing/typography across all pages.
 
 ### System Design Choices
