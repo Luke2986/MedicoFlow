@@ -8,6 +8,35 @@ import { validateCodiceFiscale } from "./validators";
 export const pianoEnum = pgEnum("piano", ["BASE", "PROFESSIONAL", "ENTERPRISE"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", ["ACTIVE", "CANCELLED", "EXPIRED", "TRIAL"]);
 
+export const specializations = pgTable("specializations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: text("nome").notNull().unique(),
+  slug: text("slug").notNull().unique(),
+  descrizione: text("descrizione"),
+  defaultKPIs: text("default_kpis").array().notNull().default(sql`ARRAY[]::text[]`),
+  cartellaTemplate: text("cartella_template").notNull().default('{}'),
+  parametriVitali: text("parametri_vitali").array().notNull().default(sql`ARRAY[]::text[]`),
+  quickActions: text("quick_actions").notNull().default('[]'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: index("specialization_slug_idx").on(table.slug),
+}));
+
+export const userPreferences = pgTable("user_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  theme: text("theme").notNull().default("light"),
+  dashboardLayout: text("dashboard_layout").array().notNull().default(sql`ARRAY[]::text[]`),
+  tableSettings: text("table_settings").notNull().default('{}'),
+  notifications: text("notifications").notNull().default('{}'),
+  customShortcuts: text("custom_shortcuts"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("user_preferences_user_idx").on(table.userId),
+}));
+
 export const ambulatori = pgTable("ambulatori", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nome: text("nome").notNull(),
@@ -20,6 +49,7 @@ export const ambulatori = pgTable("ambulatori", {
   piva: varchar("piva", { length: 11 }).notNull(),
   regione: text("regione").notNull(),
   specializzazione: text("specializzazione").notNull(),
+  specializationId: varchar("specialization_id").references(() => specializations.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -151,6 +181,10 @@ export const ambulatoriRelations = relations(ambulatori, ({ many, one }) => ({
     fields: [ambulatori.id],
     references: [onboardingProgress.ambulatorioId],
   }),
+  specialization: one(specializations, {
+    fields: [ambulatori.specializationId],
+    references: [specializations.id],
+  }),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -160,6 +194,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   appuntamenti: many(appuntamenti),
   visite: many(visite),
+  preferences: one(userPreferences, {
+    fields: [users.id],
+    references: [userPreferences.userId],
+  }),
 }));
 
 export const pazientiRelations = relations(pazienti, ({ one, many }) => ({
@@ -220,6 +258,17 @@ export const onboardingProgressRelations = relations(onboardingProgress, ({ one 
   ambulatorio: one(ambulatori, {
     fields: [onboardingProgress.ambulatorioId],
     references: [ambulatori.id],
+  }),
+}));
+
+export const specializationsRelations = relations(specializations, ({ many }) => ({
+  ambulatori: many(ambulatori),
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userPreferences.userId],
+    references: [users.id],
   }),
 }));
 
@@ -395,6 +444,30 @@ export const updatePricingLeadSchema = insertPricingLeadSchema.partial().extend(
 
 export type PricingLead = typeof pricingLeads.$inferSelect;
 export type InsertPricingLead = z.infer<typeof insertPricingLeadSchema>;
+
+export const insertSpecializationSchema = createInsertSchema(specializations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSpecializationSchema = insertSpecializationSchema.partial();
+
+export type Specialization = typeof specializations.$inferSelect;
+export type InsertSpecialization = z.infer<typeof insertSpecializationSchema>;
+
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  theme: z.enum(["light", "dark", "auto"]),
+});
+
+export const updateUserPreferencesSchema = insertUserPreferencesSchema.partial();
+
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
 
 export const themeSettings = pgTable("theme_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
