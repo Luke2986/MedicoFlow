@@ -19,6 +19,7 @@ import Billing from "@/pages/dashboard/billing";
 import ImpostazioniAmbulatorio from "@/pages/dashboard/impostazioni/ambulatorio";
 import ImpostazioniTeam from "@/pages/dashboard/impostazioni/team";
 import ImpostazioniNotifiche from "@/pages/dashboard/impostazioni/notifiche";
+import ImpostazioniPreferenze from "@/pages/dashboard/impostazioni/preferenze";
 import ImpostazioniPrivacy from "@/pages/dashboard/impostazioni/privacy";
 import ImpostazioniSupporto from "@/pages/dashboard/impostazioni/supporto";
 import ImpostazioniAspetto from "@/pages/dashboard/impostazioni/aspetto";
@@ -108,6 +109,11 @@ function Router() {
       <Route path="/dashboard/impostazioni/notifiche">
         <DashboardLayout>
           <ImpostazioniNotifiche />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/preferenze">
+        <DashboardLayout>
+          <ImpostazioniPreferenze />
         </DashboardLayout>
       </Route>
       <Route path="/dashboard/impostazioni/privacy">

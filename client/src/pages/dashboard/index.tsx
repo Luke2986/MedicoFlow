@@ -3,8 +3,11 @@ import { Users, Calendar, FileText, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import OnboardingWizard from "@/components/OnboardingWizard";
+import OnboardingSetupWizard from "@/components/OnboardingSetupWizard";
 import QuickActions from "@/components/QuickActions";
 import EmptyState from "@/components/EmptyState";
+import { useState, useEffect } from "react";
+import type { Ambulatorio } from "@shared/schema";
 
 interface Stats {
   totalePazienti: number;
@@ -15,6 +18,12 @@ interface Stats {
 
 export default function Dashboard() {
   const { ambulatorioId } = useAmbulatorio();
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+
+  const { data: ambulatorio } = useQuery<Ambulatorio>({
+    queryKey: ["/api/ambulatori", ambulatorioId],
+    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+  });
 
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/stats", ambulatorioId],
@@ -27,6 +36,18 @@ export default function Dashboard() {
     queryFn: () => fetch(`/api/appuntamenti?ambulatorioId=${ambulatorioId}`).then(r => r.json()),
     enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
   });
+
+  useEffect(() => {
+    const setupCompleted = localStorage.getItem('setup_wizard_completed');
+    if (ambulatorio && !ambulatorio.specializationId && !setupCompleted) {
+      setShowSetupWizard(true);
+    }
+  }, [ambulatorio]);
+
+  const handleSetupComplete = () => {
+    setShowSetupWizard(false);
+    localStorage.setItem('setup_wizard_completed', 'true');
+  };
 
   const hasPazienti = (stats?.totalePazienti || 0) > 0;
   const hasAppuntamenti = (stats?.appuntamentiOggi || 0) > 0 || appuntamenti.length > 0;
@@ -42,8 +63,17 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Onboarding Wizard */}
+      {/* Setup Wizard - First Time */}
       {ambulatorioId && ambulatorioId !== "default-ambulatorio-id" && (
+        <OnboardingSetupWizard 
+          ambulatorioId={ambulatorioId} 
+          open={showSetupWizard}
+          onComplete={handleSetupComplete}
+        />
+      )}
+
+      {/* Onboarding Wizard - Progress Tracker */}
+      {ambulatorioId && ambulatorioId !== "default-ambulatorio-id" && !showSetupWizard && (
         <OnboardingWizard ambulatorioId={ambulatorioId} />
       )}
 

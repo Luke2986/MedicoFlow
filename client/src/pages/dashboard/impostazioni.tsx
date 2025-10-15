@@ -9,7 +9,8 @@ import {
   HelpCircle,
   Settings as SettingsIcon,
   ChevronRight,
-  Palette
+  Palette,
+  Sliders
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,6 +81,13 @@ export default function Impostazioni() {
       href: "/dashboard/impostazioni/aspetto",
       color: "indigo",
       badge: "AI"
+    },
+    {
+      title: "Preferenze Utente",
+      description: "Tema, notifiche, layout dashboard e tabelle",
+      icon: Sliders,
+      href: "/dashboard/impostazioni/preferenze",
+      color: "gray"
     },
     {
       title: "Gestione Team",
