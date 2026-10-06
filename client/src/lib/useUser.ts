@@ -1,31 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAmbulatorio } from "./useAmbulatorio";
+import { getQueryFn } from "./queryClient";
 
-interface User {
+export interface CurrentUser {
   id: string;
   email: string;
   nome: string;
   cognome: string;
-  ruolo: string;
+  ruolo: "admin" | "medico" | "segreteria";
   ambulatorioId: string;
 }
 
-// Since there's no auth system, get the default medico user for the current ambulatorio
-export function useUser() {
-  const { ambulatorioId } = useAmbulatorio();
-
-  const { data: user } = useQuery<User>({
-    queryKey: ["/api/users/ambulatorio", ambulatorioId, "default"],
-    queryFn: async () => {
-      const res = await fetch(`/api/users/ambulatorio/${ambulatorioId}/default`);
-      if (!res.ok) throw new Error("Errore caricamento utente");
-      return res.json();
-    },
-    enabled: !!ambulatorioId,
+export function useMe() {
+  return useQuery<{ user: CurrentUser } | null>({
+    queryKey: ["/api/me"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
+}
 
+export function useUser() {
+  const { data } = useMe();
+  const user = data?.user;
   return {
     userId: user?.id || "",
     user,
+    isAdmin: user?.ruolo === "admin",
   };
 }

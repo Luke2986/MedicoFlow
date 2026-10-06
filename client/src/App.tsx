@@ -24,6 +24,9 @@ import ImpostazioniPrivacy from "@/pages/dashboard/impostazioni/privacy";
 import ImpostazioniSupporto from "@/pages/dashboard/impostazioni/supporto";
 import ImpostazioniAspetto from "@/pages/dashboard/impostazioni/aspetto";
 import Pricing from "@/pages/pricing";
+import LoginPage from "@/pages/login";
+import SetupPage from "@/pages/setup";
+import { RequireAuth, GuestOnly } from "@/components/auth/AuthGate";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -32,22 +35,24 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-background">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
-          </header>
-          <main className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto p-6 lg:p-8">
-              {children}
-            </div>
-          </main>
+    <RequireAuth>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-background">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ThemeToggle />
+            </header>
+            <main className="flex-1 overflow-y-auto">
+              <div className="max-w-7xl mx-auto p-6 lg:p-8">
+                {children}
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </RequireAuth>
   );
 }
 
@@ -56,6 +61,12 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/login">
+        <GuestOnly page="login"><LoginPage /></GuestOnly>
+      </Route>
+      <Route path="/setup">
+        <GuestOnly page="setup"><SetupPage /></GuestOnly>
+      </Route>
       <Route path="/dashboard">
         <DashboardLayout>
           <Dashboard />

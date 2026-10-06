@@ -2,10 +2,12 @@
 
 Gestionale web per ambulatori medici italiani: pazienti, appuntamenti e cartella clinica digitale in un'unica interfaccia.
 
-> **Stato: prototipo.** Il progetto non ha ancora autenticazione né controllo degli accessi. Non usarlo con dati reali di pazienti finché questi aspetti non saranno implementati.
+> **Stato: prototipo.** Accesso con email e password e dati isolati per ambulatorio sono presenti, ma il progetto non è ancora stato sottoposto a un audit di sicurezza né adeguato completamente al GDPR. Valuta con attenzione prima di usarlo con dati reali di pazienti.
 
 ## Funzionalità
 
+- **Accesso sicuro** con email e password, senza servizi esterni: sessioni di 12 ore, password di almeno 10 caratteri, protezione dai tentativi ripetuti
+- **Team e ruoli**: l'amministratore crea gli account di medici e segreteria, reimposta le password e rimuove gli utenti; ogni ambulatorio vede solo i propri dati
 - **Dashboard** con statistiche in tempo reale dell'ambulatorio
 - **Anagrafica pazienti**: creazione, modifica ed eliminazione, ricerca fuzzy con autocompletamento, filtri, paginazione, validazione del codice fiscale ed export CSV
 - **Agenda appuntamenti**: calendario settimanale interattivo, stati colorati e rilevamento dei conflitti di orario
@@ -71,6 +73,8 @@ cp .env.example .env
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
 | `DATABASE_URL` | Sì | Stringa di connessione PostgreSQL |
+| `BETTER_AUTH_SECRET` | Sì in produzione | Chiave per firmare le sessioni. Generala con `openssl rand -base64 32` e non condividerla |
+| `BETTER_AUTH_URL` | No | URL pubblico dell'app (es. `https://medicoflow.example.it`). Su Vercel viene ricavato in automatico; in locale il default è `http://localhost:5000` |
 | `PORT` | No | Porta del server (default `5000`) |
 | `GROQ_API_KEY` | No | Abilita la dettatura vocale. Senza chiave l'app funziona e la funzione resta disattivata |
 | `ADMIN_TOKEN` | No | Abilita le rotte admin (elenco dei contatti raccolti dalla pagina prezzi). Senza token restano disattivate |
@@ -84,7 +88,7 @@ Il valore di default in `.env.example` corrisponde al database avviato con `dock
 npm run db:setup
 ```
 
-Crea le tabelle e inserisce le specializzazioni mediche e un ambulatorio demo. Il comando si può rilanciare senza duplicare i dati.
+Crea le tabelle e inserisce le specializzazioni mediche. Il comando si può rilanciare senza duplicare i dati.
 
 ### 5. Avvio
 
@@ -93,6 +97,22 @@ npm run dev
 ```
 
 L'app è disponibile su `http://localhost:5000`. Frontend e backend sono serviti dallo stesso processo.
+
+### 6. Primo accesso
+
+Al primo avvio, con il database vuoto, l'app apre la pagina **Configurazione iniziale**: inserisci il nome dell'ambulatorio e i dati dell'amministratore. La pagina funziona una sola volta: appena esiste un account si chiude per sempre.
+
+Dopo l'accesso, l'amministratore aggiunge i colleghi da **Impostazioni → Team** scegliendo il ruolo:
+
+| Ruolo | Cosa può fare |
+|---|---|
+| Amministratore | Tutto, compresi dati dell'ambulatorio, team e abbonamento |
+| Medico | Pazienti, appuntamenti, visite |
+| Segreteria | Pazienti e appuntamenti |
+
+Non esiste registrazione pubblica: gli account li crea solo l'amministratore. Ognuno può cambiare la propria password da **Impostazioni → Team**.
+
+Su un'installazione pubblica completa la configurazione iniziale subito dopo il deploy, prima che lo faccia qualcun altro.
 
 ## Deploy
 
@@ -116,9 +136,11 @@ Il repository include già `vercel.json` e la funzione `api/index.js`:
 Passi:
 
 1. Importa il repository su Vercel (il preset "Other" va bene, build e output sono già configurati).
-2. In **Settings → Environment Variables** aggiungi `DATABASE_URL` (e opzionalmente `GROQ_API_KEY`).
+2. In **Settings → Environment Variables** aggiungi `DATABASE_URL` e `BETTER_AUTH_SECRET` (e opzionalmente `GROQ_API_KEY`).
 3. Prepara il database una volta con `npm run db:setup` dal tuo computer.
-4. Fai il deploy.
+4. Fai il deploy e apri subito l'app per la configurazione iniziale.
+
+Nota: il limite ai tentativi di accesso è tenuto in memoria, quindi su Vercel vale per singola istanza.
 
 Nota: le funzioni Vercel accettano richieste fino a 4,5 MB, quindi le registrazioni vocali molto lunghe possono essere rifiutate.
 
@@ -126,7 +148,7 @@ Nota: le funzioni Vercel accettano richieste fino a 4,5 MB, quindi le registrazi
 
 ```bash
 docker build -t medicoflow .
-docker run -p 5000:5000 -e DATABASE_URL="postgresql://..." medicoflow
+docker run -p 5000:5000 -e DATABASE_URL="postgresql://..." -e BETTER_AUTH_SECRET="..." medicoflow
 ```
 
 Prima del primo avvio esegui `npm run db:setup` contro lo stesso database.
@@ -149,13 +171,15 @@ npm start
 | `npm start` | Avvia la build di produzione |
 | `npm run check` | Controllo dei tipi TypeScript |
 | `npm run db:push` | Sincronizza lo schema con il database |
-| `npm run db:seed` | Inserisce i dati iniziali |
+| `npm run db:seed` | Inserisce le specializzazioni mediche |
 | `npm run db:setup` | `db:push` + `db:seed` |
 
 ## Roadmap
 
-- [ ] Autenticazione e gestione dei ruoli
-- [ ] Isolamento dei dati per ambulatorio
+- [x] Autenticazione e gestione dei ruoli
+- [x] Isolamento dei dati per ambulatorio
+- [ ] Recupero password via email (SMTP opzionale)
+- [ ] Passkey o autenticazione a due fattori
 - [ ] Conformità GDPR completa per i dati sanitari
 - [ ] Test automatici
 

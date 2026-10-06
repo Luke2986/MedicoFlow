@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Users, Calendar, FileText, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
+import { useUser } from "@/lib/useUser";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import OnboardingSetupWizard from "@/components/OnboardingSetupWizard";
 import QuickActions from "@/components/QuickActions";
@@ -18,6 +19,7 @@ interface Stats {
 
 export default function Dashboard() {
   const { ambulatorioId } = useAmbulatorio();
+  const { isAdmin } = useUser();
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [setupCompleted, setSetupCompleted] = useState(false);
 
@@ -39,13 +41,13 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    // Only show wizard if ambulatorio needs setup AND user hasn't manually completed it
-    if (ambulatorio && !ambulatorio.specializationId && !setupCompleted) {
+    // Only admins can configure the clinic, so only they get the setup wizard.
+    if (isAdmin && ambulatorio && !ambulatorio.specializationId && !setupCompleted) {
       setShowSetupWizard(true);
     } else {
       setShowSetupWizard(false);
     }
-  }, [ambulatorio, setupCompleted]);
+  }, [isAdmin, ambulatorio, setupCompleted]);
 
   const handleSetupComplete = () => {
     setSetupCompleted(true);
