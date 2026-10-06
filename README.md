@@ -46,7 +46,7 @@ tests/      Test automatici (unitari e di integrazione API)
 
 ### Requisiti
 
-- Node.js 20+
+- Node.js 22 (oppure 20.19 o successiva)
 - Un database PostgreSQL qualsiasi: locale, Docker, Supabase, Neon, Railway, ecc.
 
 ### 1. Installazione

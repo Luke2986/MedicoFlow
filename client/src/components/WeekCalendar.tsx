@@ -49,7 +49,7 @@ export default function WeekCalendar({
   }
 
   return (
-    <div className="bg-card dark:bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+    <div className="bg-card dark:bg-card rounded-lg shadow-xs border border-border overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border bg-muted">
         <div className="flex items-center gap-4">

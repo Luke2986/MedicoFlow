@@ -239,19 +239,19 @@ export function VoiceRecorder({
           <strong className="block mb-2">Per una trascrizione ottimale:</strong>
           <ul className="space-y-1 text-sm">
             <li className="flex items-start gap-2">
-              <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
               <span><strong>Ambiente silenzioso</strong> - Chiudi finestre e spegni rumori di fondo</span>
             </li>
             <li className="flex items-start gap-2">
-              <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
               <span><strong>Microfono di qualità</strong> - Usa cuffie con microfono o microfono esterno</span>
             </li>
             <li className="flex items-start gap-2">
-              <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
               <span><strong>Parla lentamente</strong> - Scandisci bene i termini medici (es. "e-mi-cra-nia")</span>
             </li>
             <li className="flex items-start gap-2">
-              <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0" />
               <span><strong>Distanza 10-15cm</strong> - Mantieni il microfono vicino alla bocca</span>
             </li>
           </ul>

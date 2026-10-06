@@ -16,7 +16,7 @@ Per le vulnerabilità di sicurezza non aprire una issue pubblica: segui [SECURIT
 
 ## Ambiente di sviluppo
 
-Requisiti: Node.js 20 o superiore e Docker (oppure un PostgreSQL già disponibile).
+Requisiti: Node.js 22 (oppure 20.19 o successiva) e Docker (oppure un PostgreSQL già disponibile).
 
 ```bash
 git clone https://github.com/<tuo-utente>/MedicoFlowClinic.git

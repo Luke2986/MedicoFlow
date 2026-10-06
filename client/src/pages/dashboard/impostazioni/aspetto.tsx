@@ -484,7 +484,7 @@ export default function ImpostazioniAspetto() {
             {Object.entries(previewPalette).map(([name, color]) => (
               <div key={name} className="space-y-2">
                 <div
-                  className="w-full h-20 rounded-lg border-2 border-border shadow-sm"
+                  className="w-full h-20 rounded-lg border-2 border-border shadow-xs"
                   style={{ backgroundColor: color }}
                   data-testid={`color-preview-${name}`}
                 />
@@ -509,19 +509,19 @@ export default function ImpostazioniAspetto() {
           <div className="space-x-3">
             <button
               style={{ backgroundColor: previewPalette.primary }}
-              className="px-6 py-3 text-white rounded-lg font-medium shadow-sm"
+              className="px-6 py-3 text-white rounded-lg font-medium shadow-xs"
             >
               Button Primary
             </button>
             <button
               style={{ backgroundColor: previewPalette.accent }}
-              className="px-6 py-3 text-white rounded-lg font-medium shadow-sm"
+              className="px-6 py-3 text-white rounded-lg font-medium shadow-xs"
             >
               Button Accent
             </button>
             <button
               style={{ backgroundColor: previewPalette.success }}
-              className="px-6 py-3 text-white rounded-lg font-medium shadow-sm"
+              className="px-6 py-3 text-white rounded-lg font-medium shadow-xs"
             >
               Success
             </button>

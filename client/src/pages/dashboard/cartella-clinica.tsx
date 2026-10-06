@@ -358,7 +358,7 @@ export default function CartellaClinica() {
       {selectedPaziente && pazienteSelezionato && pazienteSelezionato.allergie && pazienteSelezionato.allergie.length > 0 && (
         <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-5 rounded-lg" data-testid="alert-allergie">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-red-900 dark:text-red-100 text-lg mb-2">
                 ⚠️ Attenzione - Allergie

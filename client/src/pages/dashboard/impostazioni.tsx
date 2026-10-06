@@ -138,7 +138,7 @@ export default function Impostazioni() {
       {isLoading ? (
         <Skeleton className="h-24 w-full" />
       ) : (
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 p-6">
+        <Card className="bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 p-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-1" data-testid="text-ambulatorio-nome">
@@ -187,11 +187,11 @@ export default function Impostazioni() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground break-words">
+                    <p className="text-sm text-muted-foreground wrap-break-word">
                       {section.description}
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex-shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
                 </div>
               </Card>
             </Link>

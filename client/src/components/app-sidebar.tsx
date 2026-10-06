@@ -66,7 +66,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <Link href="/dashboard">
           <div className="flex items-center gap-3 cursor-pointer hover-elevate active-elevate-2 p-2 rounded-md -m-2" data-testid="link-logo">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col overflow-hidden">
@@ -104,7 +104,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 px-2 py-2" data-testid="user-profile">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <span className="text-sm font-semibold text-primary">{initials}</span>
           </div>
           <div className="flex flex-col overflow-hidden flex-1 min-w-0">
