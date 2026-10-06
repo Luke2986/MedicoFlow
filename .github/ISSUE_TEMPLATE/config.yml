@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Segnala una vulnerabilità di sicurezza
+    url: https://github.com/Luke2986/MedicoFlowClinic/security/advisories/new
+    about: Le vulnerabilità vanno segnalate in privato, non con una issue pubblica.

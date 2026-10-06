@@ -32,13 +32,14 @@ Gestionale web per ambulatori medici italiani: pazienti, appuntamenti e cartella
 ## Struttura del progetto
 
 ```
-client/   Frontend React (pagine, componenti, hook)
-server/   Backend Express (route divise per area in server/routes, autenticazione, storage)
-shared/   Schema del database e validatori condivisi tra client e server
-api/      Entry point della funzione serverless per Vercel
+client/     Frontend React (pagine, componenti, hook)
+server/     Backend Express (route divise per area in server/routes, autenticazione, storage)
+shared/     Schema del database e validatori condivisi tra client e server
+api/        Entry point della funzione serverless per Vercel
+docs/       Linee guida di design
 migrations/ Migrazioni SQL del database, generate da Drizzle
-scripts/  Script di manutenzione (migrazioni e seed)
-tests/    Test automatici (unitari e di integrazione API)
+scripts/    Script di manutenzione (migrazioni e seed)
+tests/      Test automatici (unitari e di integrazione API)
 ```
 
 ## Avvio in locale
@@ -202,6 +203,10 @@ Ogni push e pull request su GitHub esegue controllo dei tipi, test e build (`.gi
 - [ ] Conformità GDPR completa per i dati sanitari
 - [x] Test automatici e CI
 - [ ] Aggiornamento a Tailwind CSS 4 e Vite 7
+
+## Contribuire
+
+Segnalazioni, idee e pull request sono benvenute: leggi [CONTRIBUTING.md](CONTRIBUTING.md). Per le vulnerabilità di sicurezza segui [SECURITY.md](SECURITY.md) e non aprire issue pubbliche.
 
 ## Licenza
 
