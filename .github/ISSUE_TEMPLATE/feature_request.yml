@@ -1,0 +1,27 @@
+name: Proponi una funzionalità
+description: Un'idea per migliorare MedicoFlow
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Quale problema risolve
+      description: Descrivi la situazione dell'ambulatorio in cui serve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Soluzione proposta
+    validations:
+      required: true
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Alternative considerate
+  - type: checkboxes
+    id: contributo
+    attributes:
+      label: Contributo
+      options:
+        - label: Mi piacerebbe implementarla io con una pull request
