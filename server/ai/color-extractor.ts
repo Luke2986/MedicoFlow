@@ -3,9 +3,15 @@ import Color from 'color';
 import { promises as dns } from 'dns';
 import * as ipaddr from 'ipaddr.js';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
+let groq: Groq | undefined;
+
+function getGroq(): Groq {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY non impostata: l'estrazione dei colori è disabilitata.");
+  }
+  groq ??= new Groq({ apiKey: process.env.GROQ_API_KEY });
+  return groq;
+}
 
 export interface ColorPalette {
   primary: string;
@@ -183,7 +189,7 @@ export async function extractColorsFromUrl(url: string): Promise<ColorPalette> {
       const htmlSnippet = html.substring(0, 30000);
 
       // 3. Usa Groq (Llama 3.3) per analizzare ed estrarre colori
-      const completion = await groq.chat.completions.create({
+      const completion = await getGroq().chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         messages: [
           {

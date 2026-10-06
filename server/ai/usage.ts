@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { aiUsage, subscriptions } from "@shared/schema";
+import { aiUsage, subscriptions } from "../../shared/schema";
 import { eq, and } from "drizzle-orm";
 
 const PLAN_LIMITS = {

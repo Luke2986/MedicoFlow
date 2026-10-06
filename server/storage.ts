@@ -33,7 +33,7 @@ import {
   type InsertSpecialization,
   type UserPreferences,
   type InsertUserPreferences,
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql } from "drizzle-orm";
 

@@ -1,11 +1,19 @@
 import OpenAI from "openai";
 import { correctMedicalText } from "./medical-dictionary";
 
-// Using Groq API (OpenAI-compatible) for faster inference
-const groq = new OpenAI({ 
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: "https://api.groq.com/openai/v1"
-});
+let groq: OpenAI | undefined;
+
+// Groq exposes an OpenAI-compatible API; the client is created lazily so the key stays optional.
+function getGroq(): OpenAI {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY non impostata: la dettatura vocale è disabilitata.");
+  }
+  groq ??= new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: "https://api.groq.com/openai/v1",
+  });
+  return groq;
+}
 
 export interface TranscriptionResult {
   text: string;
@@ -18,7 +26,7 @@ export async function transcribeAudio(
 ): Promise<TranscriptionResult> {
   try {
     // Trascrivi audio con Whisper su Groq (solo testo grezzo)
-    const transcription = await groq.audio.transcriptions.create({
+    const transcription = await getGroq().audio.transcriptions.create({
       file: audioFile,
       model: 'whisper-large-v3',
       language: 'it',

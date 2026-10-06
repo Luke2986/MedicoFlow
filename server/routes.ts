@@ -1,6 +1,5 @@
 import type { Express } from "express";
 import express from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { startOfWeek, endOfWeek } from "date-fns";
@@ -18,7 +17,7 @@ import {
   insertPricingLeadSchema,
   insertThemeSettingsSchema,
   updateThemeSettingsSchema,
-} from "@shared/schema";
+} from "../shared/schema";
 import { extractColorsFromUrl, getDefaultPalette } from "./ai/color-extractor";
 import { renderToStream } from '@react-pdf/renderer';
 import CartellaClinicaPDF from '../client/src/lib/pdf/cartella-pdf';
@@ -27,7 +26,7 @@ const statsQuerySchema = z.object({
   ambulatorioId: z.string().uuid("ambulatorioId deve essere un UUID valido"),
 });
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   
   // Pricing Leads - Create new lead
   app.post("/api/pricing-leads", async (req, res) => {
@@ -1177,6 +1176,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
 }

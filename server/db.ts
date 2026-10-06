@@ -1,16 +1,18 @@
-// Reference: javascript_database blueprint integration
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
-
-neonConfig.webSocketConstructor = ws;
+import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import * as schema from "../shared/schema";
 
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+  throw new Error("DATABASE_URL non impostata. Copia .env.example in .env e configura il database.");
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+export const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: process.env.VERCEL ? 1 : 10,
+});
+// Idle connections can be dropped by the server or a pooler (e.g. Supabase); without a listener pg crashes the process.
+pool.on("error", (err) => {
+  console.error("Errore connessione database inattiva:", err.message);
+});
+
+export const db = drizzle(pool, { schema });

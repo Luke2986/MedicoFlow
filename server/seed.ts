@@ -1,7 +1,7 @@
 import { storage } from "./storage";
-import { PLANS } from "@shared/features";
+import { PLANS } from "../shared/features";
 import { db } from "./db";
-import { ambulatori, specializations } from "@shared/schema";
+import { ambulatori, specializations } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
 export async function seedSpecializations() {
