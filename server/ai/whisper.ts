@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logError } from "../log";
 import { correctMedicalText } from "./medical-dictionary";
 
 let groq: OpenAI | undefined;
@@ -50,7 +51,7 @@ export async function transcribeAudio(
       corrections: corrections.length > 0 ? corrections : undefined
     };
   } catch (error) {
-    console.error('Errore Whisper:', error);
+    logError('Errore Whisper:', error);
     throw new Error('Errore durante la trascrizione audio');
   }
 }

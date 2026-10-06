@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import { logError } from "../log";
 import Color from 'color';
 import { promises as dns } from 'dns';
 import * as ipaddr from 'ipaddr.js';
@@ -274,7 +275,7 @@ IMPORTANTE:
     clearTimeout(timeout);
     throw new Error('Troppi redirect');
   } catch (error: any) {
-    console.error('Error extracting colors:', error);
+    logError('Error extracting colors:', error);
     
     // Check if it's a rate limit error
     if (error.status === 429 || error.code === 'rate_limit_exceeded') {

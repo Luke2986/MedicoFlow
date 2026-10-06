@@ -73,6 +73,8 @@ cp .env.example .env
 | `DATABASE_URL` | Sì | Stringa di connessione PostgreSQL |
 | `PORT` | No | Porta del server (default `5000`) |
 | `GROQ_API_KEY` | No | Abilita la dettatura vocale. Senza chiave l'app funziona e la funzione resta disattivata |
+| `ADMIN_TOKEN` | No | Abilita le rotte admin (elenco dei contatti raccolti dalla pagina prezzi). Senza token restano disattivate |
+| `TRUST_PROXY` | No | Numero di reverse proxy davanti al server (es. `1` dietro Nginx). Su Vercel non serve |
 
 Il valore di default in `.env.example` corrisponde al database avviato con `docker compose`.
 

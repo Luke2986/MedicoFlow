@@ -1,6 +1,8 @@
 import type { Express } from "express";
+import { logError } from "./log";
 import express from "express";
 import { storage } from "./storage";
+import { aiLimiter, leadLimiter, requireAdminToken } from "./security";
 import { z } from "zod";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { 
@@ -29,22 +31,20 @@ const statsQuerySchema = z.object({
 export async function registerRoutes(app: Express): Promise<void> {
   
   // Pricing Leads - Create new lead
-  app.post("/api/pricing-leads", async (req, res) => {
+  app.post("/api/pricing-leads", leadLimiter, async (req, res) => {
     try {
       const data = insertPricingLeadSchema.parse(req.body);
       const lead = await storage.createPricingLead(data);
       
-      console.log(`🎯 Nuovo lead piano ${data.piano}: ${data.email}`);
-      
       res.status(201).json({ success: true, leadId: lead.id });
     } catch (error: any) {
-      console.error('Errore creazione lead:', error);
+      logError('Errore creazione lead:', error);
       res.status(400).json({ error: "Dati non validi" });
     }
   });
 
   // Pricing Leads - Get all leads (for admin dashboard)
-  app.get("/api/pricing-leads", async (req, res) => {
+  app.get("/api/pricing-leads", requireAdminToken, async (req, res) => {
     try {
       const leads = await storage.getPricingLeads();
       
@@ -65,13 +65,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       res.json({ leads, stats });
     } catch (error: any) {
-      console.error('Errore fetch leads:', error);
+      logError('Errore fetch leads:', error);
       res.status(500).json({ error: "Errore server" });
     }
   });
 
   // Pricing Leads - Update lead status
-  app.patch("/api/pricing-leads/:id/status", async (req, res) => {
+  app.patch("/api/pricing-leads/:id/status", requireAdminToken, async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const lead = await storage.updatePricingLeadStatus(id, status);
       res.json(lead);
     } catch (error: any) {
-      console.error('Errore aggiornamento lead:', error);
+      logError('Errore aggiornamento lead:', error);
       if (error.message === "Lead non trovato") {
         return res.status(404).json({ error: "Lead non trovato" });
       }
@@ -139,18 +139,6 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
-      if (!user) {
-        return res.status(404).json({ error: "Utente non trovato" });
-      }
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ error: "Errore del server" });
-    }
-  });
-
-  app.get("/api/users/email/:email", async (req, res) => {
-    try {
-      const user = await storage.getUserByEmail(req.params.email);
       if (!user) {
         return res.status(404).json({ error: "Utente non trovato" });
       }
@@ -347,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send('\uFEFF' + csv); // BOM per Excel
     } catch (error) {
-      console.error('Errore export CSV:', error);
+      logError('Errore export CSV:', error);
       res.status(500).json({ error: "Errore durante l'export" });
     }
   });
@@ -412,7 +400,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Stream PDF to response
       pdfStream.pipe(res);
     } catch (error: any) {
-      console.error("Errore generazione PDF cartella:", error);
+      logError("Errore generazione PDF cartella:", error);
       res.status(500).json({ error: "Errore durante la generazione del PDF" });
     }
   });
@@ -456,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const paziente = await storage.updatePaziente(req.params.id, data);
       res.json(paziente);
     } catch (error: any) {
-      console.error("Errore update paziente:", error);
+      logError("Errore update paziente:", error);
       res.status(400).json({ error: "Errore durante l'aggiornamento" });
     }
   });
@@ -542,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const appuntamento = await storage.createAppuntamento(data);
       res.status(201).json(appuntamento);
     } catch (error) {
-      console.error("Errore creazione appuntamento:", error);
+      logError("Errore creazione appuntamento:", error);
       res.status(400).json({ error: "Dati non validi" });
     }
   });
@@ -553,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const appuntamento = await storage.updateAppuntamento(req.params.id, data);
       res.json(appuntamento);
     } catch (error: any) {
-      console.error("Errore update appuntamento:", error);
+      logError("Errore update appuntamento:", error);
       res.status(400).json({ error: "Errore durante l'aggiornamento" });
     }
   });
@@ -635,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // Stream PDF to response
       pdfStream.pipe(res);
     } catch (error: any) {
-      console.error("Errore generazione PDF:", error);
+      logError("Errore generazione PDF:", error);
       res.status(500).json({ error: "Errore durante la generazione del PDF" });
     }
   });
@@ -668,7 +656,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const visita = await storage.createVisita(data);
       res.status(201).json(visita);
     } catch (error) {
-      console.error("Errore creazione visita:", error);
+      logError("Errore creazione visita:", error);
       res.status(400).json({ error: "Dati non validi" });
     }
   });
@@ -679,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const visita = await storage.updateVisita(req.params.id, data);
       res.json(visita);
     } catch (error: any) {
-      console.error("Errore update visita:", error);
+      logError("Errore update visita:", error);
       res.status(400).json({ error: "Errore durante l'aggiornamento" });
     }
   });
@@ -785,9 +773,22 @@ export async function registerRoutes(app: Express): Promise<void> {
   const { checkAIQuota, incrementAIUsage } = await import("./ai/usage");
   const { transcribeAudio } = await import("./ai/whisper");
   const multer = await import("multer");
-  const upload = multer.default({ storage: multer.memoryStorage() });
+  // 25 MB is Groq Whisper's own upload limit.
+  const upload = multer.default({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024, files: 1 },
+    fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith("audio/")),
+  });
+  const uploadAudio: express.RequestHandler = (req, res, next) => {
+    upload.single("audio")(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: "File audio non valido o troppo grande (max 25 MB)" });
+      }
+      next();
+    });
+  };
 
-  app.post("/api/ai/transcribe", upload.single("audio"), async (req, res) => {
+  app.post("/api/ai/transcribe", aiLimiter, uploadAudio, async (req, res) => {
     try {
       const { ambulatorioId, userId } = req.body;
       
@@ -843,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       });
     } catch (error: any) {
-      console.error('Errore trascrizione:', error);
+      logError('Errore trascrizione:', error);
       res.status(500).json({ 
         error: error.message || 'Errore durante la trascrizione' 
       });
@@ -867,13 +868,13 @@ export async function registerRoutes(app: Express): Promise<void> {
         voiceNotes: voiceQuota
       });
     } catch (error) {
-      console.error('Errore quota:', error);
+      logError('Errore quota:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
 
   // Theme Settings - Extract colors from URL with AI
-  app.post("/api/theme/extract", async (req, res) => {
+  app.post("/api/theme/extract", aiLimiter, async (req, res) => {
     try {
       const { url } = req.body;
 
@@ -897,7 +898,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         sourceUrl: url
       });
     } catch (error: any) {
-      console.error('Error extracting colors:', error);
+      logError('Error extracting colors:', error);
       res.status(500).json({ 
         error: error.message || 'Errore durante l\'estrazione dei colori' 
       });
@@ -937,7 +938,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         sourceUrl: settings.sourceUrl
       });
     } catch (error) {
-      console.error('Error fetching theme:', error);
+      logError('Error fetching theme:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -973,7 +974,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       res.json({ success: true, settings });
     } catch (error: any) {
-      console.error('Error saving theme:', error);
+      logError('Error saving theme:', error);
       res.status(400).json({ error: error.message || 'Errore durante il salvataggio' });
     }
   });
@@ -991,7 +992,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Error resetting theme:', error);
+      logError('Error resetting theme:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1072,7 +1073,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         }
       });
     } catch (error) {
-      console.error('Errore onboarding:', error);
+      logError('Errore onboarding:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1100,7 +1101,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       res.json(progress);
     } catch (error) {
-      console.error('Errore update onboarding:', error);
+      logError('Errore update onboarding:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1111,7 +1112,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const specializations = await storage.getAllSpecializations();
       res.json(specializations);
     } catch (error) {
-      console.error('Errore get specializations:', error);
+      logError('Errore get specializations:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1124,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       res.json(specialization);
     } catch (error) {
-      console.error('Errore get specialization:', error);
+      logError('Errore get specialization:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1137,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       res.json(specialization);
     } catch (error) {
-      console.error('Errore get specialization by slug:', error);
+      logError('Errore get specialization by slug:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1151,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       res.json(preferences);
     } catch (error) {
-      console.error('Errore get preferences:', error);
+      logError('Errore get preferences:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1161,7 +1162,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const preferences = await storage.upsertUserPreferences(req.params.userId, req.body);
       res.json(preferences);
     } catch (error) {
-      console.error('Errore upsert preferences:', error);
+      logError('Errore upsert preferences:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
@@ -1171,7 +1172,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       await storage.deleteUserPreferences(req.params.userId);
       res.json({ success: true });
     } catch (error) {
-      console.error('Errore delete preferences:', error);
+      logError('Errore delete preferences:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });
