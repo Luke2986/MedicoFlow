@@ -369,7 +369,7 @@ export default function Pazienti() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sesso">Sesso *</Label>
-                  <select name="sesso" required className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" data-testid="select-sesso">
+                  <select name="sesso" required className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" data-testid="select-sesso">
                     <option value="">Seleziona...</option>
                     <option value="M">Maschio</option>
                     <option value="F">Femmina</option>
@@ -482,7 +482,7 @@ export default function Pazienti() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-sesso">Sesso *</Label>
-                  <select name="sesso" required defaultValue={selectedPaziente.sesso} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" data-testid="select-edit-sesso">
+                  <select name="sesso" required defaultValue={selectedPaziente.sesso} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" data-testid="select-edit-sesso">
                     <option value="M">Maschio</option>
                     <option value="F">Femmina</option>
                   </select>
@@ -559,7 +559,7 @@ export default function Pazienti() {
 
       {/* AI Agent Search - Feature Premium */}
       {hasFuzzySearch ? (
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+        <Card className="p-6 bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground">
@@ -790,7 +790,7 @@ export default function Pazienti() {
                 data-testid={`card-patient-${paziente.id}`}
               >
                 <Link href={`/dashboard/pazienti/${paziente.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="text-sm font-semibold text-primary">
                       {paziente.nome[0]}{paziente.cognome[0]}
                     </span>
@@ -814,7 +814,7 @@ export default function Pazienti() {
                     </p>
                   </div>
                 </Link>
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   {isMobile ? (
                     /* Mobile: solo PDF e Edit */
                     <>

@@ -15,7 +15,7 @@ export function UpgradePrompt({
   description 
 }: UpgradePromptProps) {
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent" data-testid="card-upgrade-prompt">
+    <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-transparent" data-testid="card-upgrade-prompt">
       <CardHeader className="gap-2">
         <div className="flex items-center gap-2">
           <Crown className="w-5 h-5 text-primary" />
@@ -35,7 +35,7 @@ export function UpgradePrompt({
         </div>
       </CardContent>
 
-      <CardFooter className="flex gap-2">
+      <CardFooter className="flex flex-col items-stretch sm:flex-row gap-2">
         <Button 
           asChild 
           variant="default" 

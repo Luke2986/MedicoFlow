@@ -36,7 +36,8 @@ export async function createApp(): Promise<Express> {
   });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
+    // Better Auth errors carry a text `status` ("INTERNAL_SERVER_ERROR"); only numeric HTTP codes are usable.
+    const status = [err.statusCode, err.status].find((s) => Number.isInteger(s) && s >= 400 && s < 600) ?? 500;
     // Internal error details stay in the server logs; clients only see them for 4xx errors.
     const message = status < 500 ? err.message : "Errore interno del server";
 

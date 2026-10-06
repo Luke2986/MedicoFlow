@@ -151,7 +151,7 @@ export function CalendarView({ appuntamenti, pazienti, onEditAppointment, onCrea
                       data-testid={`calendar-appointment-${app.id}`}
                     >
                       <div className="flex items-center gap-1 mb-0.5">
-                        <Clock className="h-3 w-3 flex-shrink-0" />
+                        <Clock className="h-3 w-3 shrink-0" />
                         <span className="font-medium truncate">
                           {format(new Date(app.dataOra), 'HH:mm')}
                         </span>

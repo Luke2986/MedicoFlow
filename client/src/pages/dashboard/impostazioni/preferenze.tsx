@@ -157,7 +157,7 @@ export default function PreferenzePage() {
       {/* Tema */}
       <Card className="p-6">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
             <Settings className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 space-y-4">
@@ -188,7 +188,7 @@ export default function PreferenzePage() {
       {/* Notifiche */}
       <Card className="p-6">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
             <Bell className="w-5 h-5 text-blue-600" />
           </div>
           <div className="flex-1 space-y-4">
@@ -266,7 +266,7 @@ export default function PreferenzePage() {
       {/* Tabelle */}
       <Card className="p-6">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
             <Table2 className="w-5 h-5 text-purple-600" />
           </div>
           <div className="flex-1 space-y-4">

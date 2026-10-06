@@ -2,10 +2,22 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useMe } from "@/lib/useUser";
 
 function useSetupStatus(enabled: boolean) {
   return useQuery<{ needsSetup: boolean }>({ queryKey: ["/api/setup/status"], enabled });
+}
+
+function ServerUnavailable({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-4 text-center">
+      <p className="text-muted-foreground">Impossibile contattare il server. Riprova tra qualche istante.</p>
+      <Button variant="outline" onClick={onRetry} data-testid="button-retry">
+        Riprova
+      </Button>
+    </div>
+  );
 }
 
 function FullScreenLoader() {
@@ -30,6 +42,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }, [signedOut, setup.data, navigate]);
 
   if (me.data) return <>{children}</>;
+  if (me.isError || setup.isError) {
+    return <ServerUnavailable onRetry={() => (me.isError ? me.refetch() : setup.refetch())} />;
+  }
   return <FullScreenLoader />;
 }
 
@@ -53,5 +68,8 @@ export function GuestOnly({ page, children }: { page: "login" | "setup"; childre
   }, [redirect, navigate]);
 
   if (signedOut && setup.data && !redirect) return <>{children}</>;
+  if (me.isError || setup.isError) {
+    return <ServerUnavailable onRetry={() => (me.isError ? me.refetch() : setup.refetch())} />;
+  }
   return <FullScreenLoader />;
 }

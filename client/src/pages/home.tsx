@@ -5,12 +5,12 @@ import { Activity, Calendar, Users, FileText, Shield, Clock } from "lucide-react
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/95 via-primary to-primary/90 text-white">
+      <div className="relative overflow-hidden bg-linear-to-br from-primary/95 via-primary to-primary/90 text-white">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnptMCAxMmMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnptLTEyIDEyYzMuMzE0IDAgNiAyLjY4NiA2IDZzLTIuNjg2IDYtNiA2LTYtMi42ODYtNi02IDIuNjg2LTYgNi02eiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHN0cm9rZS13aWR0aD0iMSIvPjwvZz48L3N2Zz4=')] opacity-20"></div>
         
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-xs border border-white/20">
               <Activity className="w-4 h-4" />
               <span className="text-sm font-medium">Sistema Gestionale Professionale</span>
             </div>
@@ -43,7 +43,7 @@ export default function Home() {
                 asChild 
                 size="lg" 
                 variant="outline" 
-                className="bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur-sm h-12 px-8 text-base font-semibold"
+                className="bg-white/10 text-white border-white/30 hover:bg-white/20 backdrop-blur-xs h-12 px-8 text-base font-semibold"
                 data-testid="button-learn-more"
               >
                 <a href="#features">

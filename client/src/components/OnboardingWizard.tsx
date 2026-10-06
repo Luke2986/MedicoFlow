@@ -86,7 +86,7 @@ export default function OnboardingWizard({ ambulatorioId }: OnboardingWizardProp
   const progressPercent = (completedSteps / steps.length) * 100;
 
   return (
-    <div className="bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30 p-6 relative overflow-hidden" data-testid="onboarding-wizard">
+    <div className="bg-linear-to-br from-primary/10 to-primary/20 rounded-xl border-2 border-primary/30 p-6 relative overflow-hidden" data-testid="onboarding-wizard">
       <button
         onClick={handleDismiss}
         className="absolute top-4 right-4 p-1 hover:bg-primary/20 rounded-lg transition-colors"
