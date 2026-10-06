@@ -1,8 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { logError } from "./log";
 import express from "express";
 import { storage } from "./storage";
 import { aiLimiter, leadLimiter, requireAdminToken } from "./security";
+import { requireAuth, requireAdmin, ownsRecord } from "./authz";
+import { registerSetupRoutes, registerAccountRoutes } from "./account-routes";
 import { z } from "zod";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { 
@@ -27,6 +29,23 @@ import CartellaClinicaPDF from '../client/src/lib/pdf/cartella-pdf';
 const statsQuerySchema = z.object({
   ambulatorioId: z.string().uuid("ambulatorioId deve essere un UUID valido"),
 });
+
+async function pazienteInClinic(req: Request, pazienteId: string): Promise<boolean> {
+  const paziente = await storage.getPaziente(pazienteId);
+  return !!paziente && paziente.ambulatorioId === req.user!.ambulatorioId;
+}
+
+/** A requested medico must belong to the caller's clinic; without one, the caller (or the first doctor, for front-desk staff) is used. */
+async function resolveMedicoId(req: Request, requested: string | undefined): Promise<string | null> {
+  const ambulatorioId = req.user!.ambulatorioId;
+  if (requested) {
+    const medico = await storage.getUser(requested);
+    return medico && medico.ambulatorioId === ambulatorioId ? medico.id : null;
+  }
+  if (req.user!.ruolo !== "segreteria") return req.user!.id;
+  const medici = (await storage.getUsersByAmbulatorio(ambulatorioId)).filter((u) => u.ruolo !== "segreteria");
+  return medici[0]?.id ?? null;
+}
 
 export async function registerRoutes(app: Express): Promise<void> {
   
@@ -91,10 +110,16 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
   
+  registerSetupRoutes(app);
+
+  // Everything below requires a signed-in user and is scoped to their ambulatorio.
+  app.use("/api", requireAuth);
+  registerAccountRoutes(app);
+
   app.get("/api/ambulatori-list", async (req, res) => {
     try {
-      const result = await storage.getAllAmbulatori();
-      res.json(result);
+      const ambulatorio = await storage.getAmbulatorio(req.user!.ambulatorioId);
+      res.json(ambulatorio ? [ambulatorio] : []);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
     }
@@ -102,7 +127,9 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.get("/api/ambulatori/:id", async (req, res) => {
     try {
-      const ambulatorio = await storage.getAmbulatorio(req.params.id);
+      const ambulatorio = req.params.id === req.user!.ambulatorioId
+        ? await storage.getAmbulatorio(req.params.id)
+        : undefined;
       if (!ambulatorio) {
         return res.status(404).json({ error: "Ambulatorio non trovato" });
       }
@@ -112,19 +139,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.post("/api/ambulatori", async (req, res) => {
-    try {
-      const data = insertAmbulatorioSchema.parse(req.body);
-      const ambulatorio = await storage.createAmbulatorio(data);
-      res.status(201).json(ambulatorio);
-    } catch (error) {
-      res.status(400).json({ error: "Dati non validi" });
-    }
-  });
-
-  app.patch("/api/ambulatori/:id", async (req, res) => {
+  app.patch("/api/ambulatori/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
+      if (id !== req.user!.ambulatorioId) {
+        return res.status(404).json({ error: "Ambulatorio non trovato" });
+      }
       const data = updateAmbulatorioSchema.parse(req.body);
       const ambulatorio = await storage.updateAmbulatorio(id, data);
       res.json(ambulatorio);
@@ -139,35 +159,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
-      if (!user) {
-        return res.status(404).json({ error: "Utente non trovato" });
-      }
+      if (!ownsRecord(req, res, user, "Utente non trovato")) return;
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
-    }
-  });
-
-  app.get("/api/users/ambulatorio/:ambulatorioId/default", async (req, res) => {
-    try {
-      const users = await storage.getUsersByAmbulatorio(req.params.ambulatorioId);
-      if (!users || users.length === 0) {
-        return res.status(404).json({ error: "Nessun utente trovato per questo ambulatorio" });
-      }
-      const defaultUser = users.find(u => u.ruolo === "medico") || users[0];
-      res.json(defaultUser);
-    } catch (error) {
-      res.status(500).json({ error: "Errore del server" });
-    }
-  });
-
-  app.post("/api/users", async (req, res) => {
-    try {
-      const data = insertUserSchema.parse(req.body);
-      const user = await storage.createUser(data);
-      res.status(201).json(user);
-    } catch (error) {
-      res.status(400).json({ error: "Dati non validi" });
     }
   });
 
@@ -343,9 +338,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/pazienti/codice-fiscale/:cf", async (req, res) => {
     try {
       const paziente = await storage.getPazienteByCodiceFiscale(req.params.cf);
-      if (!paziente) {
-        return res.status(404).json({ error: "Paziente non trovato" });
-      }
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
       res.json(paziente);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
@@ -358,9 +351,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Carica paziente
       const paziente = await storage.getPaziente(pazienteId);
-      if (!paziente) {
-        return res.status(404).json({ error: "Paziente non trovato" });
-      }
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
 
       // Carica ambulatorio
       const ambulatorio = await storage.getAmbulatorio(paziente.ambulatorioId);
@@ -408,9 +399,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/pazienti/:id", async (req, res) => {
     try {
       const paziente = await storage.getPaziente(req.params.id);
-      if (!paziente) {
-        return res.status(404).json({ error: "Paziente non trovato" });
-      }
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
       res.json(paziente);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
@@ -440,6 +429,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         req.body.telefono = req.body.telefono.replace(/[\s\-\(\)]/g, '');
       }
       
+      const existing = await storage.getPaziente(req.params.id);
+      if (!ownsRecord(req, res, existing, "Paziente non trovato")) return;
+
       const data = updatePazienteSchema.parse(req.body);
       const paziente = await storage.updatePaziente(req.params.id, data);
       res.json(paziente);
@@ -451,6 +443,8 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.delete("/api/pazienti/:id", async (req, res) => {
     try {
+      const existing = await storage.getPaziente(req.params.id);
+      if (!ownsRecord(req, res, existing, "Paziente non trovato")) return;
       await storage.deletePaziente(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -481,7 +475,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         appuntamenti = await storage.getAppuntamenti(ambulatorioId);
       }
       
-      res.json(appuntamenti);
+      res.json(appuntamenti.filter((a) => a.ambulatorioId === ambulatorioId));
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
     }
@@ -490,9 +484,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/appuntamenti/:id", async (req, res) => {
     try {
       const appuntamento = await storage.getAppuntamento(req.params.id);
-      if (!appuntamento) {
-        return res.status(404).json({ error: "Appuntamento non trovato" });
-      }
+      if (!ownsRecord(req, res, appuntamento, "Appuntamento non trovato")) return;
       res.json(appuntamento);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
@@ -502,15 +494,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/appuntamenti", async (req, res) => {
     try {
       const data = insertAppuntamentoSchema.parse(req.body);
-      
-      if (!data.medicoId && data.ambulatorioId) {
-        const medici = await storage.getUsersByAmbulatorio(data.ambulatorioId);
-        if (medici.length > 0) {
-          data.medicoId = medici[0].id;
-        } else {
-          return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
-        }
+
+      if (!(await pazienteInClinic(req, data.pazienteId))) {
+        return res.status(404).json({ error: "Paziente non trovato" });
       }
+      const medicoId = await resolveMedicoId(req, data.medicoId);
+      if (!medicoId) {
+        return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
+      }
+      data.medicoId = medicoId;
 
       const newStart = new Date(data.dataOra);
       const newEnd = new Date(newStart.getTime() + (data.durata || 30) * 60000);
@@ -537,7 +529,16 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.patch("/api/appuntamenti/:id", async (req, res) => {
     try {
+      const existing = await storage.getAppuntamento(req.params.id);
+      if (!ownsRecord(req, res, existing, "Appuntamento non trovato")) return;
+
       const data = updateAppuntamentoSchema.parse(req.body);
+      if (data.pazienteId && !(await pazienteInClinic(req, data.pazienteId))) {
+        return res.status(404).json({ error: "Paziente non trovato" });
+      }
+      if (data.medicoId && !(await resolveMedicoId(req, data.medicoId))) {
+        return res.status(404).json({ error: "Medico non trovato" });
+      }
       const appuntamento = await storage.updateAppuntamento(req.params.id, data);
       res.json(appuntamento);
     } catch (error: any) {
@@ -548,6 +549,8 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.delete("/api/appuntamenti/:id", async (req, res) => {
     try {
+      const existing = await storage.getAppuntamento(req.params.id);
+      if (!ownsRecord(req, res, existing, "Appuntamento non trovato")) return;
       await storage.deleteAppuntamento(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -573,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         visite = await storage.getVisite(ambulatorioId);
       }
       
-      res.json(visite);
+      res.json(visite.filter((v) => v.ambulatorioId === ambulatorioId));
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
     }
@@ -585,9 +588,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Carica visita
       const visita = await storage.getVisita(visitaId);
-      if (!visita) {
-        return res.status(404).json({ error: "Visita non trovata" });
-      }
+      if (!ownsRecord(req, res, visita, "Visita non trovata")) return;
 
       // Carica paziente
       const paziente = await storage.getPaziente(visita.pazienteId);
@@ -631,9 +632,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.get("/api/visite/:id", async (req, res) => {
     try {
       const visita = await storage.getVisita(req.params.id);
-      if (!visita) {
-        return res.status(404).json({ error: "Visita non trovata" });
-      }
+      if (!ownsRecord(req, res, visita, "Visita non trovata")) return;
       res.json(visita);
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
@@ -643,15 +642,21 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/visite", async (req, res) => {
     try {
       const data = insertVisitaSchema.parse(req.body);
-      
-      if (!data.medicoId && data.ambulatorioId) {
-        const medici = await storage.getUsersByAmbulatorio(data.ambulatorioId);
-        if (medici.length > 0) {
-          data.medicoId = medici[0].id;
-        } else {
-          return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
+
+      if (!(await pazienteInClinic(req, data.pazienteId))) {
+        return res.status(404).json({ error: "Paziente non trovato" });
+      }
+      if (data.appuntamentoId) {
+        const appuntamento = await storage.getAppuntamento(data.appuntamentoId);
+        if (!appuntamento || appuntamento.ambulatorioId !== req.user!.ambulatorioId) {
+          return res.status(404).json({ error: "Appuntamento non trovato" });
         }
       }
+      const medicoId = await resolveMedicoId(req, data.medicoId);
+      if (!medicoId) {
+        return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
+      }
+      data.medicoId = medicoId;
       
       const visita = await storage.createVisita(data);
       res.status(201).json(visita);
@@ -663,7 +668,16 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.patch("/api/visite/:id", async (req, res) => {
     try {
+      const existing = await storage.getVisita(req.params.id);
+      if (!ownsRecord(req, res, existing, "Visita non trovata")) return;
+
       const data = updateVisitaSchema.parse(req.body);
+      if (data.pazienteId && !(await pazienteInClinic(req, data.pazienteId))) {
+        return res.status(404).json({ error: "Paziente non trovato" });
+      }
+      if (data.medicoId && !(await resolveMedicoId(req, data.medicoId))) {
+        return res.status(404).json({ error: "Medico non trovato" });
+      }
       const visita = await storage.updateVisita(req.params.id, data);
       res.json(visita);
     } catch (error: any) {
@@ -674,6 +688,8 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.delete("/api/visite/:id", async (req, res) => {
     try {
+      const existing = await storage.getVisita(req.params.id);
+      if (!ownsRecord(req, res, existing, "Visita non trovata")) return;
       await storage.deleteVisita(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -747,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.put("/api/subscription", async (req, res) => {
+  app.put("/api/subscription", requireAdmin, async (req, res) => {
     try {
       const validation = updateSubscriptionSchema.extend({
         ambulatorioId: z.string() // Richiesto per PUT
@@ -790,11 +806,9 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/ai/transcribe", aiLimiter, uploadAudio, async (req, res) => {
     try {
-      const { ambulatorioId, userId } = req.body;
-      
-      if (!ambulatorioId || !userId) {
-        return res.status(400).json({ error: "ambulatorioId e userId richiesti" });
-      }
+      // Multipart bodies are parsed after requireAuth, so the identity comes from the session here.
+      const ambulatorioId = req.user!.ambulatorioId;
+      const userId = req.user!.id;
 
       // Check quota
       const quota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
@@ -1146,6 +1160,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   // User Preferences API
   app.get("/api/preferences/:userId", async (req, res) => {
     try {
+      if (req.params.userId !== req.user!.id) {
+        return res.status(404).json({ error: 'Preferenze non trovate' });
+      }
       const preferences = await storage.getUserPreferences(req.params.userId);
       if (!preferences) {
         return res.status(404).json({ error: 'Preferenze non trovate' });
@@ -1159,6 +1176,9 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/preferences/:userId", async (req, res) => {
     try {
+      if (req.params.userId !== req.user!.id) {
+        return res.status(404).json({ error: 'Preferenze non trovate' });
+      }
       const preferences = await storage.upsertUserPreferences(req.params.userId, req.body);
       res.json(preferences);
     } catch (error) {
@@ -1169,6 +1189,9 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.delete("/api/preferences/:userId", async (req, res) => {
     try {
+      if (req.params.userId !== req.user!.id) {
+        return res.status(404).json({ error: 'Preferenze non trovate' });
+      }
       await storage.deleteUserPreferences(req.params.userId);
       res.json({ success: true });
     } catch (error) {

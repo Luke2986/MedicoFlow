@@ -11,7 +11,12 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Activity, LayoutDashboard, Users, Calendar, FileText, Settings, CreditCard } from "lucide-react";
+import { Activity, LayoutDashboard, Users, Calendar, FileText, Settings, CreditCard, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useUser } from "@/lib/useUser";
+import { signOut } from "@/lib/auth";
+
+const RUOLO_LABEL = { admin: "Amministratore", medico: "Medico", segreteria: "Segreteria" } as const;
 
 const menuItems = [
   {
@@ -47,7 +52,14 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
+  const { user } = useUser();
+  const initials = user ? `${user.nome[0] ?? ""}${user.cognome[0] ?? ""}`.toUpperCase() : "";
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <Sidebar>
@@ -91,14 +103,26 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-md hover-elevate active-elevate-2 cursor-pointer" data-testid="user-profile">
+        <div className="flex items-center gap-3 px-2 py-2" data-testid="user-profile">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-semibold text-primary">DM</span>
+            <span className="text-sm font-semibold text-primary">{initials}</span>
           </div>
           <div className="flex flex-col overflow-hidden flex-1 min-w-0">
-            <span className="text-sm font-medium text-sidebar-foreground truncate">Dr. Mario Rossi</span>
-            <span className="text-xs text-muted-foreground truncate">Medico di base</span>
+            <span className="text-sm font-medium text-sidebar-foreground truncate">
+              {user ? `${user.nome} ${user.cognome}` : ""}
+            </span>
+            <span className="text-xs text-muted-foreground truncate">{user ? RUOLO_LABEL[user.ruolo] : ""}</span>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSignOut}
+            aria-label="Esci"
+            title="Esci"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
