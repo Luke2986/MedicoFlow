@@ -90,7 +90,7 @@ export default function Pazienti() {
       
       return fetch(`/api/pazienti?${params.toString()}`).then(r => r.json());
     },
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
   const pazientiData = data?.pazienti || [];
@@ -104,7 +104,7 @@ export default function Pazienti() {
       if (!res.ok) throw new Error("Errore caricamento subscription");
       return res.json();
     },
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
   // Check se ha accesso fuzzy search
@@ -417,7 +417,7 @@ export default function Pazienti() {
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel">
                   Annulla
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-patient">
+                <Button type="submit" disabled={createMutation.isPending || !ambulatorioId} data-testid="button-save-patient">
                   {createMutation.isPending ? "Salvataggio..." : "Salva"}
                 </Button>
               </DialogFooter>

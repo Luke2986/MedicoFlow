@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 
+// Placeholder row inserted by older seeds; it has no users, so it must never be selected.
+const LEGACY_PLACEHOLDER_ID = "default-ambulatorio-id";
+
 export function useAmbulatorio() {
   const { data: ambulatori = [] } = useQuery<any[]>({
     queryKey: ["/api/ambulatori-list"],
@@ -10,7 +13,8 @@ export function useAmbulatorio() {
     },
   });
 
-  const ambulatorioId = ambulatori[0]?.id || "default-ambulatorio-id";
-  
-  return { ambulatorioId, ambulatorio: ambulatori[0] };
+  const ambulatorio = ambulatori.find((a) => a.id !== LEGACY_PLACEHOLDER_ID);
+  const ambulatorioId: string = ambulatorio?.id ?? "";
+
+  return { ambulatorioId, ambulatorio };
 }

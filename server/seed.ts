@@ -1,8 +1,7 @@
 import { storage } from "./storage";
 import { PLANS } from "../shared/features";
 import { db } from "./db";
-import { ambulatori, specializations } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { specializations } from "../shared/schema";
 
 export async function seedSpecializations() {
   try {
@@ -149,36 +148,6 @@ export async function seedDatabase() {
     const existingAmbulatori = await storage.getAllAmbulatori();
     
     if (existingAmbulatori.length === 0) {
-      // Create default ambulatorio with fixed ID for fallback (direct DB insert to specify ID)
-      await db.insert(ambulatori).values({
-        id: "default-ambulatorio-id",
-        nome: "Ambulatorio Demo",
-        indirizzo: "Via Demo 1",
-        citta: "Milano",
-        provincia: "MI",
-        cap: "20100",
-        telefono: "+39 02 0000000",
-        email: "demo@medicoflow.it",
-        piva: "00000000000",
-        regione: "Lombardia",
-        specializzazione: "Medicina Generale",
-      });
-
-      // Create trial subscription for default ambulatorio
-      const defaultTrialEnd = new Date();
-      defaultTrialEnd.setDate(defaultTrialEnd.getDate() + 30);
-      
-      await storage.createSubscription({
-        ambulatorioId: "default-ambulatorio-id",
-        piano: "BASE",
-        status: "TRIAL",
-        prezzoMensile: PLANS.BASE.price * 100,
-        features: [...PLANS.BASE.features],
-        dataFine: defaultTrialEnd,
-      });
-
-      console.log("✅ Default ambulatorio created with ID: default-ambulatorio-id");
-
       // Create main demo ambulatorio
       const ambulatorio = await storage.createAmbulatorio({
         nome: "Ambulatorio Dr. Mario Rossi",

@@ -23,19 +23,19 @@ export default function Dashboard() {
 
   const { data: ambulatorio } = useQuery<Ambulatorio>({
     queryKey: ["/api/ambulatori", ambulatorioId],
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
   const { data: stats, isLoading } = useQuery<Stats>({
     queryKey: ["/api/stats", ambulatorioId],
     queryFn: () => fetch(`/api/stats?ambulatorioId=${ambulatorioId}`).then(r => r.json()),
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
   const { data: appuntamenti = [] } = useQuery<any[]>({
     queryKey: ["/api/appuntamenti", ambulatorioId],
     queryFn: () => fetch(`/api/appuntamenti?ambulatorioId=${ambulatorioId}`).then(r => r.json()),
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function Dashboard() {
       </div>
 
       {/* Setup Wizard - First Time */}
-      {ambulatorioId && ambulatorioId !== "default-ambulatorio-id" && (
+      {ambulatorioId && (
         <OnboardingSetupWizard 
           ambulatorioId={ambulatorioId} 
           open={showSetupWizard}
@@ -76,7 +76,7 @@ export default function Dashboard() {
       )}
 
       {/* Onboarding Wizard - Progress Tracker */}
-      {ambulatorioId && ambulatorioId !== "default-ambulatorio-id" && !showSetupWizard && (
+      {ambulatorioId && !showSetupWizard && (
         <OnboardingWizard ambulatorioId={ambulatorioId} />
       )}
 

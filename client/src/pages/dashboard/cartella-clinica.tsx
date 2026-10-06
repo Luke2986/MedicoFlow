@@ -68,7 +68,7 @@ export default function CartellaClinica() {
   const { data: pazientiResponse } = useQuery<{ pazienti: Paziente[], pagination: any }>({
     queryKey: ["/api/pazienti", ambulatorioId],
     queryFn: () => fetch(`/api/pazienti?ambulatorioId=${ambulatorioId}&limit=1000`).then(r => r.json()),
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
   const pazienti = pazientiResponse?.pazienti || [];
@@ -825,7 +825,7 @@ export default function CartellaClinica() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-create">
                 Annulla
               </Button>
-              <Button type="submit" disabled={createMutation.isPending} data-testid="button-salva-visita">
+              <Button type="submit" disabled={createMutation.isPending || !ambulatorioId} data-testid="button-salva-visita">
                 {createMutation.isPending ? "Salvataggio..." : "Salva Visita"}
               </Button>
             </DialogFooter>

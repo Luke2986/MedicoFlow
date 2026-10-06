@@ -22,14 +22,16 @@ export default function Appuntamenti() {
   const { data: appuntamenti = [], isLoading } = useQuery<Appuntamento[]>({
     queryKey: ["/api/appuntamenti", ambulatorioId, currentWeekDate.toISOString()],
     queryFn: () => fetch(`/api/appuntamenti?ambulatorioId=${ambulatorioId}&date=${currentWeekDate.toISOString()}`).then(r => r.json()),
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    enabled: !!ambulatorioId,
   });
 
-  const { data: pazienti = [] } = useQuery<Paziente[]>({
+  const { data: pazientiResponse } = useQuery<{ pazienti: Paziente[], pagination: any }>({
     queryKey: ["/api/pazienti", ambulatorioId],
-    queryFn: () => fetch(`/api/pazienti?ambulatorioId=${ambulatorioId}`).then(r => r.json()),
-    enabled: !!ambulatorioId && ambulatorioId !== "default-ambulatorio-id",
+    queryFn: () => fetch(`/api/pazienti?ambulatorioId=${ambulatorioId}&limit=1000`).then(r => r.json()),
+    enabled: !!ambulatorioId,
   });
+
+  const pazienti = pazientiResponse?.pazienti || [];
 
   const handleAppuntamentoClick = (appuntamento: any) => {
     setSelectedAppuntamento(appuntamento);

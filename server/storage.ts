@@ -110,7 +110,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getAllAmbulatori(): Promise<Ambulatorio[]> {
-    return await db.select().from(ambulatori);
+    return await db.select().from(ambulatori).orderBy(ambulatori.createdAt);
   }
 
   async getAmbulatorio(id: string): Promise<Ambulatorio | undefined> {
