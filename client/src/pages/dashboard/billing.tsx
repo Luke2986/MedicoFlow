@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { PLANS, FEATURE_NAMES, type PlanKey } from "@shared/features";
 import { type Subscription } from "@shared/schema";
 import { Check, Sparkles, X, CheckCircle2, Users, Database } from "lucide-react";
-
-const AMBULATORIO_ID = "4fc2e9ce-3c28-4782-8a13-74f128cebee5";
 
 const PLAN_DETAILS = {
   BASE: {
@@ -45,6 +44,7 @@ const PLAN_DETAILS = {
 };
 
 export default function BillingPage() {
+  const { ambulatorioId } = useAmbulatorio();
   const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<keyof typeof PLAN_DETAILS | null>(null);
@@ -60,7 +60,13 @@ export default function BillingPage() {
   });
 
   const { data: subscription, isLoading } = useQuery<Subscription>({
-    queryKey: ["/api/subscription", AMBULATORIO_ID],
+    queryKey: ["/api/subscription", ambulatorioId],
+    queryFn: async () => {
+      const res = await fetch(`/api/subscription?ambulatorioId=${ambulatorioId}`);
+      if (!res.ok) throw new Error("Errore caricamento subscription");
+      return res.json();
+    },
+    enabled: !!ambulatorioId,
   });
 
   const handlePlanSelect = (planKey: keyof typeof PLAN_DETAILS) => {

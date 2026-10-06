@@ -1,3 +1,4 @@
+import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -16,9 +17,6 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { type Ambulatorio, type Subscription } from "@shared/schema";
-
-// Hardcoded ambulatorio ID (no auth system)
-const AMBULATORIO_ID = "9f6d275b-f296-495b-b80c-907404f09a15";
 
 interface SettingsSection {
   title: string;
@@ -40,22 +38,25 @@ const colorClasses: Record<string, string> = {
 };
 
 export default function Impostazioni() {
+  const { ambulatorioId } = useAmbulatorio();
   const { data: ambulatorio, isLoading: loadingAmbulatorio } = useQuery<Ambulatorio>({
-    queryKey: ["/api/ambulatori", AMBULATORIO_ID],
+    queryKey: ["/api/ambulatori", ambulatorioId],
     queryFn: async () => {
-      const res = await fetch(`/api/ambulatori/${AMBULATORIO_ID}`);
+      const res = await fetch(`/api/ambulatori/${ambulatorioId}`);
       if (!res.ok) throw new Error("Errore caricamento ambulatorio");
       return res.json();
-    }
+    },
+    enabled: !!ambulatorioId,
   });
 
   const { data: subscription, isLoading: loadingSubscription } = useQuery<Subscription>({
-    queryKey: ["/api/subscription", AMBULATORIO_ID],
+    queryKey: ["/api/subscription", ambulatorioId],
     queryFn: async () => {
-      const res = await fetch(`/api/subscription?ambulatorioId=${AMBULATORIO_ID}`);
+      const res = await fetch(`/api/subscription?ambulatorioId=${ambulatorioId}`);
       if (!res.ok) throw new Error("Errore caricamento subscription");
       return res.json();
-    }
+    },
+    enabled: !!ambulatorioId,
   });
 
   const sections: SettingsSection[] = [

@@ -1,3 +1,4 @@
+import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -12,10 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { type Ambulatorio } from "@shared/schema";
 import { useState, useEffect } from "react";
 
-// Hardcoded ambulatorio ID (no auth system)
-const AMBULATORIO_ID = "9f6d275b-f296-495b-b80c-907404f09a15";
-
 export default function AmbulatorioPage() {
+  const { ambulatorioId } = useAmbulatorio();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     nome: "",
@@ -32,12 +31,13 @@ export default function AmbulatorioPage() {
   });
 
   const { data: ambulatorio, isLoading } = useQuery<Ambulatorio>({
-    queryKey: ["/api/ambulatori", AMBULATORIO_ID],
+    queryKey: ["/api/ambulatori", ambulatorioId],
     queryFn: async () => {
-      const res = await fetch(`/api/ambulatori/${AMBULATORIO_ID}`);
+      const res = await fetch(`/api/ambulatori/${ambulatorioId}`);
       if (!res.ok) throw new Error("Errore caricamento ambulatorio");
       return res.json();
-    }
+    },
+    enabled: !!ambulatorioId,
   });
 
   const { data: specializations = [], isLoading: loadingSpecs } = useQuery<any[]>({
@@ -70,11 +70,11 @@ export default function AmbulatorioPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<typeof formData>) => {
-      return await apiRequest("PATCH", `/api/ambulatori/${AMBULATORIO_ID}`, data);
+      return await apiRequest("PATCH", `/api/ambulatori/${ambulatorioId}`, data);
     },
     onSuccess: (updatedAmbulatorio) => {
       // Invalidate ambulatorio query to refresh all cached data
-      queryClient.invalidateQueries({ queryKey: ["/api/ambulatori", AMBULATORIO_ID] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ambulatori", ambulatorioId] });
       toast({
         title: "✅ Modifiche salvate",
         description: "I dati dell'ambulatorio sono stati aggiornati con successo",
