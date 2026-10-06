@@ -13,6 +13,9 @@ function resolveBaseURL(): string {
 
 export const MIN_PASSWORD_LENGTH = 10;
 
+// Set by server/app.ts from Express's req.ip, which honours the `trust proxy` setting.
+export const CLIENT_IP_HEADER = "x-medicoflow-client-ip";
+
 export const auth = betterAuth({
   baseURL: resolveBaseURL(),
   basePath: "/api/auth",
@@ -48,6 +51,9 @@ export const auth = betterAuth({
       "/sign-in/email": { window: 60, max: 10 },
       "/change-password": { window: 60, max: 5 },
     },
+  },
+  advanced: {
+    ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
   },
   telemetry: { enabled: false },
 });

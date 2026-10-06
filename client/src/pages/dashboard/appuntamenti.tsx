@@ -65,16 +65,7 @@ export default function Appuntamenti() {
         ...(data.id && { stato: data.stato })
       };
 
-      const response = await apiRequest(method, url, payload);
-      
-      if (response.error === 'Conflitto: esiste già un appuntamento in questo orario') {
-        toast({
-          title: "Conflitto rilevato",
-          description: "Esiste già un appuntamento in questo orario",
-          variant: "destructive",
-        });
-        throw new Error('Conflitto');
-      }
+      await apiRequest(method, url, payload);
 
       queryClient.invalidateQueries({ queryKey: ["/api/appuntamenti"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
@@ -88,13 +79,14 @@ export default function Appuntamenti() {
         description: data.id ? "L'appuntamento è stato modificato con successo" : "L'appuntamento è stato aggiunto al calendario",
       });
     } catch (error: any) {
-      if (error.message !== 'Conflitto') {
-        toast({
-          title: "Errore",
-          description: error.message || "Impossibile salvare l'appuntamento",
-          variant: "destructive",
-        });
-      }
+      const conflict = typeof error?.message === "string" && error.message.startsWith("409:");
+      toast({
+        title: conflict ? "Conflitto rilevato" : "Errore",
+        description: conflict
+          ? "Esiste già un appuntamento in questo orario"
+          : "Impossibile salvare l'appuntamento",
+        variant: "destructive",
+      });
       throw error;
     }
   };

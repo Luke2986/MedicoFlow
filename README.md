@@ -33,10 +33,12 @@ Gestionale web per ambulatori medici italiani: pazienti, appuntamenti e cartella
 
 ```
 client/   Frontend React (pagine, componenti, hook)
-server/   Backend Express (route, storage, seed del database)
+server/   Backend Express (route divise per area in server/routes, autenticazione, storage)
 shared/   Schema del database e validatori condivisi tra client e server
 api/      Entry point della funzione serverless per Vercel
-scripts/  Script di manutenzione (seed del database)
+migrations/ Migrazioni SQL del database, generate da Drizzle
+scripts/  Script di manutenzione (migrazioni e seed)
+tests/    Test automatici (unitari e di integrazione API)
 ```
 
 ## Avvio in locale
@@ -88,7 +90,9 @@ Il valore di default in `.env.example` corrisponde al database avviato con `dock
 npm run db:setup
 ```
 
-Crea le tabelle e inserisce le specializzazioni mediche. Il comando si può rilanciare senza duplicare i dati.
+Applica le migrazioni in `migrations/` e inserisce le specializzazioni mediche. Il comando si può rilanciare: applica solo le migrazioni nuove e non duplica i dati.
+
+Un database creato con una versione precedente tramite `db:push` non ha lo storico delle migrazioni: per quello continua a usare `npm run db:push`, oppure ricrea il database da zero.
 
 ### 5. Avvio
 
@@ -170,9 +174,24 @@ npm start
 | `npm run build` | Compila frontend e backend in `dist/` |
 | `npm start` | Avvia la build di produzione |
 | `npm run check` | Controllo dei tipi TypeScript |
-| `npm run db:push` | Sincronizza lo schema con il database |
+| `npm test` | Esegue i test (quelli di integrazione richiedono `DATABASE_URL`) |
+| `npm run db:migrate` | Applica le migrazioni al database |
+| `npm run db:generate` | Crea una nuova migrazione dopo una modifica a `shared/schema.ts` |
+| `npm run db:push` | Sincronizza lo schema senza migrazioni (solo per prove in locale) |
 | `npm run db:seed` | Inserisce le specializzazioni mediche |
-| `npm run db:setup` | `db:push` + `db:seed` |
+| `npm run db:setup` | `db:migrate` + `db:seed` |
+
+## Test
+
+```bash
+docker compose up -d
+docker compose exec db createdb -U postgres medicoflow_test
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/medicoflow_test" npm test
+```
+
+I test unitari girano sempre. Quelli di integrazione verificano accesso, ruoli e isolamento tra ambulatori su un database PostgreSQL reale, e partono solo se `DATABASE_URL` è impostata. **Usa un database dedicato ai test: tutte le tabelle vengono svuotate a ogni esecuzione.**
+
+Ogni push e pull request su GitHub esegue controllo dei tipi, test e build (`.github/workflows/ci.yml`).
 
 ## Roadmap
 
@@ -181,7 +200,8 @@ npm start
 - [ ] Recupero password via email (SMTP opzionale)
 - [ ] Passkey o autenticazione a due fattori
 - [ ] Conformità GDPR completa per i dati sanitari
-- [ ] Test automatici
+- [x] Test automatici e CI
+- [ ] Aggiornamento a Tailwind CSS 4 e Vite 7
 
 ## Licenza
 
