@@ -3,13 +3,17 @@ import { registerRoutes } from "./routes";
 import { log, logError } from "./log";
 import { applySecurityMiddleware } from "./security";
 import { toNodeHandler } from "better-auth/node";
-import { auth } from "./auth";
+import { auth, CLIENT_IP_HEADER } from "./auth";
 
 export async function createApp(): Promise<Express> {
   const app = express();
   applySecurityMiddleware(app);
   // Better Auth parses its own request bodies, so it must be mounted before express.json().
-  app.all("/api/auth/*", toNodeHandler(auth));
+  app.all("/api/auth/*", (req, _res, next) => {
+    // Overwrites any client-sent value, so the sign-in rate limit can't be dodged with a forged header.
+    req.headers[CLIENT_IP_HEADER] = req.ip ?? "";
+    next();
+  }, toNodeHandler(auth));
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
 
@@ -24,7 +28,7 @@ export async function createApp(): Promise<Express> {
     next();
   });
 
-  await registerRoutes(app);
+  registerRoutes(app);
 
   // Unknown API paths must not fall through to the SPA's index.html.
   app.use("/api", (_req, res) => {

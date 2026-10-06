@@ -70,7 +70,7 @@ export interface IStorage {
   getAppuntamentiByMedico(medicoId: string): Promise<Appuntamento[]>;
   getAppuntamentiByDate(ambulatorioId: string, date: Date): Promise<Appuntamento[]>;
   getAppuntamentiByWeek(ambulatorioId: string, weekStart: Date, weekEnd: Date): Promise<Appuntamento[]>;
-  createAppuntamento(appuntamento: InsertAppuntamento): Promise<Appuntamento>;
+  createAppuntamento(appuntamento: InsertAppuntamento & { medicoId: string }): Promise<Appuntamento>;
   updateAppuntamento(id: string, appuntamento: Partial<InsertAppuntamento>): Promise<Appuntamento>;
   deleteAppuntamento(id: string): Promise<void>;
   
@@ -78,7 +78,7 @@ export interface IStorage {
   getVisita(id: string): Promise<Visita | undefined>;
   getVisiteByPaziente(pazienteId: string): Promise<Visita[]>;
   getVisiteByMedico(medicoId: string): Promise<Visita[]>;
-  createVisita(visita: InsertVisita): Promise<Visita>;
+  createVisita(visita: InsertVisita & { medicoId: string }): Promise<Visita>;
   updateVisita(id: string, visita: Partial<InsertVisita>): Promise<Visita>;
   deleteVisita(id: string): Promise<void>;
   
@@ -356,7 +356,7 @@ export class DatabaseStorage implements IStorage {
     return results.map(r => ({ ...r.appuntamenti, paziente: r.pazienti }));
   }
 
-  async createAppuntamento(insertAppuntamento: InsertAppuntamento): Promise<Appuntamento> {
+  async createAppuntamento(insertAppuntamento: InsertAppuntamento & { medicoId: string }): Promise<Appuntamento> {
     const [appuntamento] = await db
       .insert(appuntamenti)
       .values(insertAppuntamento)
@@ -406,7 +406,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(visite.dataVisita));
   }
 
-  async createVisita(insertVisita: InsertVisita): Promise<Visita> {
+  async createVisita(insertVisita: InsertVisita & { medicoId: string }): Promise<Visita> {
     const [visita] = await db
       .insert(visite)
       .values(insertVisita)

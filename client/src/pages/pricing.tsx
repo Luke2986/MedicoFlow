@@ -10,7 +10,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Sparkles, X, CheckCircle2, ArrowLeft } from "lucide-react";
 
-const PLAN_DETAILS = {
+type PlanDetail = {
+  name: string;
+  price: number;
+  description: string;
+  features: string[];
+  popular?: boolean;
+};
+
+const PLAN_DETAILS: Record<"BASE" | "PROFESSIONAL" | "ENTERPRISE", PlanDetail> = {
   BASE: {
     name: "BASE",
     price: 189,

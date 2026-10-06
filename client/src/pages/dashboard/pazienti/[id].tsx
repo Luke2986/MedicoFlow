@@ -313,7 +313,7 @@ export default function PazienteDettaglio() {
                       {format(new Date(visita.dataVisita), "HH:mm", { locale: it })}
                     </div>
                     <Link href={`/dashboard/cartella-clinica?pazienteId=${pazienteId}`}>
-                      <Button variant="link" className="text-primary">
+                      <Button variant="ghost" className="text-primary">
                         Vedi cartella completa →
                       </Button>
                     </Link>
