@@ -3,10 +3,18 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/index.js": { "includeFiles": "migrations/**" }
+    "api/index.js": {
+      "includeFiles": "{migrations/**,node_modules/pdfkit/js/standard-fonts/**,node_modules/pdfkit/js/data/**,node_modules/@electric-sql/pglite/dist/*.{wasm,data}}"
+    }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

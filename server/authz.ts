@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth, isRuolo, type AuthUser } from "./auth";
+import { isInMemory } from "./db";
+import { storage } from "./storage";
 
 declare global {
   namespace Express {
@@ -14,6 +16,8 @@ export async function loadUser(req: Request): Promise<AuthUser | undefined> {
   const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
   if (!result) return undefined;
   const u = result.user as typeof result.user & { cognome: string; ruolo: string; ambulatorioId: string };
+  // A demo session comes from the cookie cache: make sure the user still exists after a reset of this instance.
+  if (isInMemory && !(await storage.getUser(u.id))) return undefined;
   return {
     id: u.id,
     email: u.email,

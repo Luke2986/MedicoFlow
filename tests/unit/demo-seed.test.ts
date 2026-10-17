@@ -74,6 +74,23 @@ describe("demo mode (in-memory database)", () => {
     expect((await db.select().from(schema.pazienti)).length).toBeGreaterThanOrEqual(20);
   });
 
+  it("keeps a visitor signed in on another serverless instance", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/demo/session");
+    const before = (await agent.get("/api/me")).body;
+
+    // A different instance has rebuilt the same clinic from scratch: no session rows, same IDs.
+    const { resetDemoDatabase } = await import("../../server/prepare-db");
+    await resetDemoDatabase("demo");
+    expect((await db.select().from(schema.session)).length).toBe(0);
+
+    const after = await agent.get("/api/me");
+    expect(after.status).toBe(200);
+    expect(after.body.user.ambulatorioId).toBe(before.user.ambulatorioId);
+    const pazienti = await agent.get(`/api/pazienti?ambulatorioId=${before.user.ambulatorioId}`);
+    expect(pazienti.body.pagination.total).toBeGreaterThanOrEqual(20);
+  });
+
   it("rejects an unknown reset mode", async () => {
     expect((await request(app).post("/api/demo/reset").send({ mode: "all" })).status).toBe(400);
   });
