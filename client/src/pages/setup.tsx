@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { postJson, signIn } from "@/lib/auth";
+import { enterDemo, resetDemo, useDemo } from "@/lib/demo";
 
 const MIN_PASSWORD_LENGTH = 10;
 
@@ -14,6 +15,20 @@ export default function SetupPage() {
   const [form, setForm] = useState({ nomeAmbulatorio: "", nome: "", cognome: "", email: "", password: "", conferma: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const demo = useDemo();
+
+  const loadDemoData = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await resetDemo("demo");
+      await enterDemo();
+      navigate("/dashboard");
+    } catch (err) {
+      setError((err as Error).message);
+      setLoading(false);
+    }
+  };
 
   const update = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -75,6 +90,11 @@ export default function SetupPage() {
           {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Crea account
         </Button>
+        {demo.data?.demo && (
+          <Button type="button" variant="ghost" className="w-full" onClick={loadDemoData} disabled={loading} data-testid="button-demo-load">
+            Oppure carica i dati di esempio
+          </Button>
+        )}
       </form>
     </AuthShell>
   );

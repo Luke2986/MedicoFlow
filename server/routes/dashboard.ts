@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { requireAdmin } from "../authz";
-import { startOfWeek } from "date-fns";
+import { endOfWeek, startOfWeek } from "date-fns";
 import { updateSubscriptionSchema } from "../../shared/schema";
 import { storage } from "../storage";
 import { z } from "zod";
@@ -30,20 +30,22 @@ export function registerDashboardRoutes(app: Express) {
         storage.getAppuntamenti(ambulatorioId),
       ]);
 
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - today.getDay());
-      
-      const appuntamentiSettimana = appuntamentiTotali.filter(app => 
-        new Date(app.dataOra) >= startOfWeek
-      );
+      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+      const appuntamentiSettimana = appuntamentiTotali.filter((app) => {
+        const dataOra = new Date(app.dataOra);
+        return dataOra >= weekStart && dataOra <= weekEnd;
+      });
+
+      // Share of this week's appointments, already due, where the patient actually showed up.
+      const completati = appuntamentiSettimana.filter((app) => app.stato === "completato").length;
+      const mancati = appuntamentiSettimana.filter((app) => app.stato === "no-show").length;
 
       res.json({
         totalePazienti: pazienti.length,
         appuntamentiOggi: appuntamentiOggi.length,
         appuntamentiSettimana: appuntamentiSettimana.length,
-        tassoAttivita: appuntamentiTotali.length > 0 
-          ? Math.round((appuntamentiSettimana.length / 7) * 100) 
-          : 0,
+        tassoAttivita: completati + mancati > 0 ? Math.round((completati / (completati + mancati)) * 100) : 0,
       });
     } catch (error) {
       res.status(500).json({ error: "Errore del server" });
