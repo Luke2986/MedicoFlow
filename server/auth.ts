@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { db, isInMemory } from "./db";
 import { users, session, account, verification, RUOLI, type Ruolo } from "../shared/schema";
 
@@ -17,8 +17,18 @@ export const MIN_PASSWORD_LENGTH = 10;
 // Set by server/app.ts from Express's req.ip, which honours the `trust proxy` setting.
 export const CLIENT_IP_HEADER = "x-medicoflow-client-ip";
 
-// The in-memory demo loses every session on restart anyway, so a per-process secret is enough there.
-const secret = process.env.BETTER_AUTH_SECRET || (isInMemory ? randomBytes(32).toString("base64") : undefined);
+/**
+ * The in-memory demo can run without BETTER_AUTH_SECRET. On Vercel every instance of a deployment must sign
+ * sessions with the same key, so it is derived from the deployment; elsewhere a per-process key is enough.
+ */
+function demoSecret() {
+  if (process.env.VERCEL_DEPLOYMENT_ID) {
+    return createHash("sha256").update(`medicoflow-demo:${process.env.VERCEL_DEPLOYMENT_ID}`).digest("base64");
+  }
+  return randomBytes(32).toString("base64");
+}
+
+const secret = process.env.BETTER_AUTH_SECRET || (isInMemory ? demoSecret() : undefined);
 
 export const auth = betterAuth({
   secret,
@@ -46,6 +56,9 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 12,
     updateAge: 60 * 60,
+    // Demo only: each serverless instance has its own in-memory database, so the session travels in a signed
+    // cookie instead of being looked up. With a real database sessions stay server-side and revocable.
+    cookieCache: { enabled: isInMemory, maxAge: 60 * 60 * 12 },
   },
   rateLimit: {
     enabled: true,

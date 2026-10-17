@@ -1,14 +1,16 @@
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { createUserWithPassword } from "../auth";
+import { auth } from "../auth";
 import {
+  account,
   ambulatori,
   appuntamenti,
   onboardingProgress,
   pazienti,
   specializations,
   subscriptions,
+  users,
   visite,
   type Ruolo,
 } from "../../shared/schema";
@@ -195,6 +197,19 @@ function mulberry32(seed: number) {
   };
 }
 
+/**
+ * IDs derived from a fixed key: every serverless instance builds the same clinic with the same IDs,
+ * so a session started on one instance keeps working when the next request lands on another.
+ */
+function stableId(key: string) {
+  const h = createHash("sha256").update(`medicoflow-demo:${key}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+function seededRand(key: string) {
+  return mulberry32(parseInt(createHash("sha256").update(key).digest("hex").slice(0, 8), 16));
+}
+
 const TIME_ZONE = "Europe/Rome";
 
 function romeParts(date: Date) {
@@ -238,6 +253,7 @@ export async function seedDemo() {
   const [medicinaGenerale] = await db.select().from(specializations).where(eq(specializations.slug, "medicina-generale"));
 
   const [ambulatorio] = await db.insert(ambulatori).values({
+    id: stableId("ambulatorio"),
     nome: "Poliambulatorio Santa Lucia",
     indirizzo: "Via Giuseppe Ripamonti 118",
     citta: "Milano",
@@ -272,13 +288,27 @@ export async function seedDemo() {
     completedAt: new Date(),
   });
 
+  // One shared password, hashed once: hashing is the slowest step of a cold start.
   const password = randomBytes(18).toString("base64url");
-  const staff = [];
-  for (const s of STAFF) {
-    staff.push(await createUserWithPassword({ ...s, password, ambulatorioId: ambulatorio.id }));
-  }
+  const hash = await (await auth.$context).password.hash(password);
+  const staff = await db.insert(users).values(STAFF.map((s) => ({
+    id: stableId(`user:${s.email}`),
+    email: s.email,
+    nome: s.nome,
+    cognome: s.cognome,
+    ruolo: s.ruolo,
+    ambulatorioId: ambulatorio.id,
+    emailVerified: true,
+  }))).returning();
+  await db.insert(account).values(staff.map((u) => ({
+    id: stableId(`account:${u.email}`),
+    accountId: u.id,
+    providerId: "credential",
+    userId: u.id,
+    password: hash,
+  })));
   demoLogin = { email: STAFF[0].email, password };
-  const medici = staff.filter((_, i) => STAFF[i].ruolo !== "segreteria");
+  const medici = staff.filter((u) => u.ruolo !== "segreteria");
 
   const createdPazienti = await db.insert(pazienti).values(PAZIENTI.map((p, i) => {
     const dataNascita = new Date(`${p.nascita}T00:00:00Z`);
@@ -286,6 +316,7 @@ export async function seedDemo() {
     const giorniFa = i >= PAZIENTI.length - 2 ? 1 + i % 3 : 250 + Math.floor(rand() * 900);
     const createdAt = new Date(Date.now() - giorniFa * 86_400_000);
     return {
+      id: stableId(`paziente:${i}`),
       createdAt,
       updatedAt: createdAt,
       nome: p.nome,
@@ -329,6 +360,7 @@ export async function seedDemo() {
         const stato = passato ? (r < 0.07 ? "no-show" : "completato") : (r < 0.05 ? "cancellato" : "confermato");
         const quadro = QUADRI[condizioneDi.get(paziente.id)!];
         appuntamentiRows.push({
+          id: stableId(`appuntamento:${day.toISOString().slice(0, 10)}:${medico.id}:${hour}`),
           pazienteId: paziente.id,
           medicoId: medico.id,
           dataOra,
@@ -347,11 +379,14 @@ export async function seedDemo() {
 
   // Clinical history: a visit for each completed appointment plus older visits over the past months.
   const visiteRows: (typeof visite.$inferInsert)[] = [];
-  const addVisita = (pazienteId: string, medicoId: string, dataVisita: Date, appuntamentoId: string | null) => {
+  const addVisita = (key: string, pazienteId: string, medicoId: string, dataVisita: Date, appuntamentoId: string | null) => {
     const q = QUADRI[condizioneDi.get(pazienteId)!];
-    const varia = (n: number, spread: number) => n + Math.round((rand() - 0.5) * spread);
+    // Own random sequence per visit, so the rest of the clinic does not depend on how many visits exist yet.
+    const vrand = seededRand(key);
+    const varia = (n: number, spread: number) => n + Math.round((vrand() - 0.5) * spread);
     const p = PAZIENTI[createdPazienti.findIndex((x) => x.id === pazienteId)];
     visiteRows.push({
+      id: stableId(key),
       pazienteId,
       medicoId,
       appuntamentoId,
@@ -362,7 +397,7 @@ export async function seedDemo() {
       esamiEseguiti: q.esami ?? null,
       diagnosi: q.diagnosi,
       terapia: q.terapia,
-      noteCliniche: rand() < 0.5 ? "Controllo programmato tra 3 mesi." : null,
+      noteCliniche: vrand() < 0.5 ? "Controllo programmato tra 3 mesi." : null,
       peso: p.sesso === "M" ? varia(80, 16) : varia(64, 14),
       altezza: p.sesso === "M" ? varia(176, 12) : varia(164, 10),
       pressioneSistolica: varia(q.pressione[0], 10),
@@ -374,7 +409,7 @@ export async function seedDemo() {
   };
 
   for (const a of createdAppuntamenti) {
-    if (a.stato === "completato") addVisita(a.pazienteId, a.medicoId, a.dataOra, a.id);
+    if (a.stato === "completato") addVisita(`visita:${a.id}`, a.pazienteId, a.medicoId, a.dataOra, a.id);
   }
   for (const paziente of createdPazienti) {
     // Patients registered this week have no history yet.
@@ -386,7 +421,7 @@ export async function seedDemo() {
       // The clinic is closed on Sunday.
       if (giorno.getUTCDay() === 0) giorno.setUTCDate(giorno.getUTCDate() - 1);
       const [hour, minute] = pick(SLOTS);
-      addVisita(paziente.id, pick(medici).id, romeTime(giorno.getUTCFullYear(), giorno.getUTCMonth(), giorno.getUTCDate(), hour, minute), null);
+      addVisita(`visita:${paziente.id}:${i}`, paziente.id, pick(medici).id, romeTime(giorno.getUTCFullYear(), giorno.getUTCMonth(), giorno.getUTCDate(), hour, minute), null);
     }
   }
   await db.insert(visite).values(visiteRows);
