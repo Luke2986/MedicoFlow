@@ -229,7 +229,9 @@ Ogni push e pull request su GitHub esegue controllo dei tipi, test e build (`.gi
 - [ ] Passkey o autenticazione a due fattori
 - [ ] Conformità GDPR completa per i dati sanitari
 - [x] Test automatici e CI
-- [ ] Aggiornamento a Tailwind CSS 4 e Vite 7
+- [x] Aggiornamento a Tailwind CSS 4 e Vite 8
+- [x] Demo pronta senza database
+- [ ] Dettatura vocale con [Wispr Flow](https://wisprflow.ai) come alternativa a Groq: oggi tra le migliori per qualità della trascrizione. L'accesso all'API va richiesto al team enterprise di Wispr
 
 ## Contribuire
 
