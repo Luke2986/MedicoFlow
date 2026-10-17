@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "./db";
+import { randomBytes } from "crypto";
+import { db, isInMemory } from "./db";
 import { users, session, account, verification, RUOLI, type Ruolo } from "../shared/schema";
 
 const port = process.env.PORT || "5000";
@@ -16,7 +17,11 @@ export const MIN_PASSWORD_LENGTH = 10;
 // Set by server/app.ts from Express's req.ip, which honours the `trust proxy` setting.
 export const CLIENT_IP_HEADER = "x-medicoflow-client-ip";
 
+// The in-memory demo loses every session on restart anyway, so a per-process secret is enough there.
+const secret = process.env.BETTER_AUTH_SECRET || (isInMemory ? randomBytes(32).toString("base64") : undefined);
+
 export const auth = betterAuth({
+  secret,
   baseURL: resolveBaseURL(),
   basePath: "/api/auth",
   database: drizzleAdapter(db, {

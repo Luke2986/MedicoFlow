@@ -53,22 +53,16 @@ describe.skipIf(!hasDb)("API: authentication and per-clinic isolation", () => {
   }
 
   beforeAll(async () => {
-    const { db, pool } = await import("../../server/db");
-    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-    await migrate(db, { migrationsFolder: "./migrations" });
-
-    const { rows } = await pool.query<{ tablename: string }>(
-      "SELECT tablename FROM pg_tables WHERE schemaname = 'public'",
-    );
-    if (rows.length) {
-      await pool.query(`TRUNCATE ${rows.map((r) => `"${r.tablename}"`).join(", ")} CASCADE`);
-    }
+    const { closeDb } = await import("../../server/db");
+    const { migrateDatabase, truncateAllTables } = await import("../../server/prepare-db");
+    await migrateDatabase();
+    await truncateAllTables();
 
     const { createApp } = await import("../../server/app");
     const { storage } = await import("../../server/storage");
     const { createUserWithPassword } = await import("../../server/auth");
     app = await createApp();
-    closePool = () => pool.end();
+    closePool = closeDb;
 
     createClinicWithUser = async (email, password) => {
       const amb = await storage.createAmbulatorio({
@@ -90,6 +84,13 @@ describe.skipIf(!hasDb)("API: authentication and per-clinic isolation", () => {
     it("rejects requests without a session", async () => {
       expect((await agent().get("/api/me")).status).toBe(401);
       expect((await agent().get("/api/pazienti?ambulatorioId=x")).status).toBe(401);
+    });
+
+    it("never exposes the demo routes on a real database", async () => {
+      // Not registered, so they fall through to the authentication check.
+      expect((await agent().get("/api/demo")).status).toBe(401);
+      expect((await agent().post("/api/demo/session")).status).toBe(401);
+      expect((await agent().post("/api/demo/reset").send({ mode: "empty" })).status).toBe(401);
     });
 
     it("validates and runs only once", async () => {

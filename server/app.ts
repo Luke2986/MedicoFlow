@@ -4,8 +4,10 @@ import { log, logError } from "./log";
 import { applySecurityMiddleware } from "./security";
 import { toNodeHandler } from "better-auth/node";
 import { auth, CLIENT_IP_HEADER } from "./auth";
+import { prepareDatabase } from "./prepare-db";
 
 export async function createApp(): Promise<Express> {
+  await prepareDatabase();
   const app = express();
   applySecurityMiddleware(app);
   // Better Auth parses its own request bodies, so it must be mounted before express.json().

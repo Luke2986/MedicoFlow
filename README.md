@@ -18,6 +18,7 @@ Gestionale web per ambulatori medici italiani: pazienti, appuntamenti e cartella
 - **Onboarding guidato** al primo accesso per configurare ambulatorio e specializzazione
 - **Impostazioni**: dati ambulatorio, team, notifiche, privacy, preferenze (tema chiaro/scuro, densità tabelle) e aspetto
 - **Interfaccia responsive**, ottimizzata anche per mobile, interamente in italiano
+- **Demo pronta senza database**: senza configurare nulla l'app parte con un ambulatorio di esempio (dati inventati) e si può svuotare per ripartire da zero
 
 ## Stack
 
@@ -26,7 +27,7 @@ Gestionale web per ambulatori medici italiani: pazienti, appuntamenti e cartella
 | Frontend | React 18, TypeScript, Vite, Wouter, TanStack Query, Tailwind CSS, shadcn/ui |
 | Form e validazione | react-hook-form, Zod |
 | Backend | Node.js, Express, TypeScript |
-| Database | PostgreSQL, Drizzle ORM |
+| Database | PostgreSQL (oppure PGlite in memoria per la demo), Drizzle ORM |
 | PDF | @react-pdf/renderer |
 
 ## Struttura del progetto
@@ -42,7 +43,28 @@ scripts/    Script di manutenzione (migrazioni e seed)
 tests/      Test automatici (unitari e di integrazione API)
 ```
 
-## Avvio in locale
+## Prova veloce (senza database)
+
+Serve solo Node.js 22 (oppure 20.19 o successiva).
+
+```bash
+git clone https://github.com/Luke2986/MedicoFlowClinic.git
+cd MedicoFlowClinic
+npm install
+npm run dev
+```
+
+Apri `http://localhost:5000/login` e premi **Entra nella demo**.
+
+Senza `DATABASE_URL` l'app usa un database PostgreSQL in memoria ([PGlite](https://pglite.dev)) e lo riempie con un ambulatorio di esempio: 4 utenti, 24 pazienti, appuntamenti della settimana corrente e della prossima, storico delle visite. Tutti i dati sono inventati.
+
+- **Ripristina dati demo** (banner in alto nella dashboard) cancella le modifiche e ricarica l'esempio.
+- **Ricomincia da zero** svuota tutto e apre la configurazione iniziale, per provare l'app con il proprio ambulatorio.
+- Con `DEMO_DATA=false` l'app parte direttamente vuota.
+
+Limiti della modalità demo: i dati restano solo nella memoria del server, si perdono a ogni riavvio e sono condivisi tra tutti i visitatori. Non usarla per dati reali.
+
+## Avvio in locale con un database
 
 ### Requisiti
 
@@ -75,15 +97,18 @@ cp .env.example .env
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
-| `DATABASE_URL` | Sì | Stringa di connessione PostgreSQL |
-| `BETTER_AUTH_SECRET` | Sì in produzione | Chiave per firmare le sessioni. Generala con `openssl rand -base64 32` e non condividerla |
+| `DATABASE_URL` | No | Stringa di connessione PostgreSQL. Senza, l'app parte in modalità demo con un database in memoria |
+| `DEMO_DATA` | No | Solo in modalità demo: `false` per partire vuoti invece che con i dati di esempio |
+| `BETTER_AUTH_SECRET` | Sì con un database | Chiave per firmare le sessioni. Generala con `openssl rand -base64 32` e non condividerla. In modalità demo, se manca, ne viene generata una a ogni avvio |
 | `BETTER_AUTH_URL` | No | URL pubblico dell'app (es. `https://medicoflow.example.it`). Su Vercel viene ricavato in automatico; in locale il default è `http://localhost:5000` |
 | `PORT` | No | Porta del server (default `5000`) |
 | `GROQ_API_KEY` | No | Abilita la dettatura vocale. Senza chiave l'app funziona e la funzione resta disattivata |
 | `ADMIN_TOKEN` | No | Abilita le rotte admin (elenco dei contatti raccolti dalla pagina prezzi). Senza token restano disattivate |
 | `TRUST_PROXY` | No | Numero di reverse proxy davanti al server (es. `1` dietro Nginx). Su Vercel non serve |
 
-Il valore di default in `.env.example` corrisponde al database avviato con `docker compose`.
+Il valore d'esempio di `DATABASE_URL` in `.env.example` (da decommentare) corrisponde al database avviato con `docker compose`.
+
+Con un database esterno le funzioni demo (accesso rapido, ripristino, ricomincia da zero) sono disattivate: i tuoi dati non vengono mai cancellati dall'app.
 
 ### 4. Schema e dati iniziali
 
@@ -138,9 +163,11 @@ Il repository include già `vercel.json` e la funzione `api/index.js`:
 - il frontend viene servito come sito statico da `dist/public`;
 - tutte le richieste `/api/*` passano a un'unica funzione serverless che esegue l'app Express.
 
-Passi:
+**Come demo pubblica**: importa il repository su Vercel (il preset "Other" va bene, build e output sono già configurati) e fai il deploy senza variabili d'ambiente. Chi apre il link trova l'ambulatorio di esempio. Vercel può avviare più istanze o fermarle quando non ricevono traffico: ognuna ha il suo database in memoria, quindi i dati possono tornare all'esempio e la sessione può chiudersi. Basta rientrare con **Entra nella demo**.
 
-1. Importa il repository su Vercel (il preset "Other" va bene, build e output sono già configurati).
+**Con un database vero**:
+
+1. Importa il repository su Vercel.
 2. In **Settings → Environment Variables** aggiungi `DATABASE_URL` e `BETTER_AUTH_SECRET` (e opzionalmente `GROQ_API_KEY`).
 3. Prepara il database una volta con `npm run db:setup` dal tuo computer.
 4. Fai il deploy e apri subito l'app per la configurazione iniziale.
@@ -156,7 +183,7 @@ docker build -t medicoflow .
 docker run -p 5000:5000 -e DATABASE_URL="postgresql://..." -e BETTER_AUTH_SECRET="..." medicoflow
 ```
 
-Prima del primo avvio esegui `npm run db:setup` contro lo stesso database.
+Prima del primo avvio esegui `npm run db:setup` contro lo stesso database. Senza `-e DATABASE_URL` il container parte in modalità demo.
 
 ### Server Node (VPS, Render, Railway, Fly.io, ...)
 

@@ -1,7 +1,11 @@
 import "dotenv/config";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db, pool } from "../server/db";
+import { closeDb, isInMemory } from "../server/db";
+import { migrateDatabase } from "../server/prepare-db";
 
-await migrate(db, { migrationsFolder: "./migrations" });
+if (isInMemory) {
+  console.error("DATABASE_URL non impostata: senza database esterno l'app crea le tabelle da sola all'avvio.");
+  process.exit(1);
+}
+await migrateDatabase();
 console.log("Migrazioni applicate");
-await pool.end();
+await closeDb();

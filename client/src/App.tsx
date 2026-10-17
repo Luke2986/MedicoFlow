@@ -27,6 +27,7 @@ import Pricing from "@/pages/pricing";
 import LoginPage from "@/pages/login";
 import SetupPage from "@/pages/setup";
 import { RequireAuth, GuestOnly } from "@/components/auth/AuthGate";
+import { DemoBanner } from "@/components/DemoBanner";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -44,6 +45,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <ThemeToggle />
             </header>
+            <DemoBanner />
             <main className="flex-1 overflow-y-auto">
               <div className="max-w-7xl mx-auto p-6 lg:p-8">
                 {children}
