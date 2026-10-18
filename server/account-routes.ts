@@ -5,7 +5,6 @@ import rateLimit from "express-rate-limit";
 import { db } from "./db";
 import { storage } from "./storage";
 import { users, RUOLI } from "../shared/schema";
-import { PLANS } from "../shared/features";
 import { createUserWithPassword, setUserPassword, deleteUserAccount, MIN_PASSWORD_LENGTH } from "./auth";
 import { requireAdmin } from "./authz";
 import { logError } from "./log";
@@ -74,17 +73,6 @@ export function registerSetupRoutes(app: Express) {
         piva: "",
         regione: "",
         specializzazione: "Medicina Generale",
-      });
-
-      const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 30);
-      await storage.createSubscription({
-        ambulatorioId: ambulatorio.id,
-        piano: "BASE",
-        status: "TRIAL",
-        prezzoMensile: PLANS.BASE.price * 100,
-        features: [...PLANS.BASE.features],
-        dataFine: trialEnd,
       });
 
       await createUserWithPassword({

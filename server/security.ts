@@ -1,5 +1,4 @@
-import type { Express, Request, Response, NextFunction } from "express";
-import { timingSafeEqual } from "crypto";
+import type { Express } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
@@ -57,28 +56,3 @@ export const aiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Troppe richieste AI, riprova tra un minuto." },
 });
-
-export const leadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 5,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { error: "Troppe richieste, riprova più tardi." },
-});
-
-// Admin-only endpoints stay disabled (404) unless ADMIN_TOKEN is configured.
-export function requireAdminToken(req: Request, res: Response, next: NextFunction) {
-  const expected = process.env.ADMIN_TOKEN;
-  if (!expected) {
-    return res.status(404).json({ error: "Non trovato" });
-  }
-
-  const provided = req.get("authorization")?.replace(/^Bearer /, "") ?? "";
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    return res.status(401).json({ error: "Non autorizzato" });
-  }
-
-  next();
-}

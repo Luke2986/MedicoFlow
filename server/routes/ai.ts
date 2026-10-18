@@ -3,7 +3,6 @@ import { aiLimiter } from "../security";
 import { storage } from "../storage";
 import { logError } from "../log";
 import multer from "multer";
-import { checkAIQuota, incrementAIUsage } from "../ai/usage";
 import { transcribeAudio, TRANSCRIPTION_MODEL, TRANSCRIPTION_PROVIDER } from "../ai/whisper";
 import { requireAdmin } from "../authz";
 import { z } from "zod";
@@ -64,19 +63,6 @@ export function registerAiRoutes(app: Express) {
         });
       }
 
-      // Check quota
-      const quota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
-      if (!quota.allowed) {
-        return res.status(429).json({
-          error: 'Limite voice notes raggiunto',
-          quota: {
-            used: quota.used,
-            limit: quota.limit,
-            resetDate: quota.resetDate
-          }
-        });
-      }
-
       const audioFile = req.file;
       // The demo simulation records no audio: it dictates from the patient's history instead.
       if (!audioFile && !simulata) {
@@ -98,23 +84,7 @@ export function registerAiRoutes(app: Express) {
       }
       await audit("ok", paziente.id);
 
-      // Increment usage
-      await incrementAIUsage(ambulatorioId, userId, 'voiceNotes');
-
-      // Get updated quota
-      const updatedQuota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
-
-      res.json({
-        success: true,
-        result,
-        quota: {
-          allowed: updatedQuota.allowed,
-          used: updatedQuota.used,
-          limit: updatedQuota.limit,
-          resetDate: updatedQuota.resetDate,
-          percentageUsed: updatedQuota.percentageUsed
-        }
-      });
+      res.json({ success: true, result });
     } catch (error: any) {
       logError('Errore trascrizione:', error);
       res.status(500).json({ 
@@ -176,28 +146,6 @@ export function registerAiRoutes(app: Express) {
       res.json(entries);
     } catch (error) {
       logError('Errore audit AI:', error);
-      res.status(500).json({ error: 'Errore server' });
-    }
-  });
-
-  app.get("/api/ai/quota", async (req, res) => {
-    try {
-      const { ambulatorioId, userId } = req.query;
-
-      if (!ambulatorioId || typeof ambulatorioId !== 'string' || 
-          !userId || typeof userId !== 'string') {
-        return res.status(400).json({ error: 'ambulatorioId e userId richiesti' });
-      }
-
-      const subscription = await storage.getSubscription(ambulatorioId);
-      const voiceQuota = await checkAIQuota(ambulatorioId, userId, 'voiceNotes');
-
-      res.json({
-        plan: subscription?.piano || 'BASE',
-        voiceNotes: voiceQuota
-      });
-    } catch (error) {
-      logError('Errore quota:', error);
       res.status(500).json({ error: 'Errore server' });
     }
   });

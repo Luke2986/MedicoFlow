@@ -15,7 +15,6 @@ import PazienteDettaglio from "@/pages/dashboard/pazienti/[id]";
 import Appuntamenti from "@/pages/dashboard/appuntamenti";
 import CartellaClinica from "@/pages/dashboard/cartella-clinica";
 import Impostazioni from "@/pages/dashboard/impostazioni";
-import Billing from "@/pages/dashboard/billing";
 import ImpostazioniAmbulatorio from "@/pages/dashboard/impostazioni/ambulatorio";
 import ImpostazioniTeam from "@/pages/dashboard/impostazioni/team";
 import ImpostazioniNotifiche from "@/pages/dashboard/impostazioni/notifiche";
@@ -26,7 +25,6 @@ import ImpostazioniAspetto from "@/pages/dashboard/impostazioni/aspetto";
 import ImpostazioniDatiFiscali from "@/pages/dashboard/impostazioni/dati-fiscali";
 import Fatture from "@/pages/dashboard/fatture";
 import SistemaTs from "@/pages/dashboard/sistema-ts";
-import Pricing from "@/pages/pricing";
 import LoginPage from "@/pages/login";
 import SetupPage from "@/pages/setup";
 import { RequireAuth, GuestOnly } from "@/components/auth/AuthGate";
@@ -65,7 +63,6 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/pricing" component={Pricing} />
       <Route path="/login">
         <GuestOnly page="login"><LoginPage /></GuestOnly>
       </Route>
@@ -100,16 +97,6 @@ function Router() {
       <Route path="/dashboard/impostazioni">
         <DashboardLayout>
           <Impostazioni />
-        </DashboardLayout>
-      </Route>
-      <Route path="/billing">
-        <DashboardLayout>
-          <Billing />
-        </DashboardLayout>
-      </Route>
-      <Route path="/dashboard/impostazioni/billing">
-        <DashboardLayout>
-          <Billing />
         </DashboardLayout>
       </Route>
       <Route path="/dashboard/impostazioni/ambulatorio">

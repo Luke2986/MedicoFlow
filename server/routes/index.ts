@@ -3,7 +3,6 @@ import { requireAuth } from "../authz";
 import { isInMemory } from "../db";
 import { registerDemoRoutes } from "./demo";
 import { registerSetupRoutes, registerAccountRoutes } from "../account-routes";
-import { registerPricingLeadRoutes } from "./pricing-leads";
 import { registerAmbulatorioRoutes } from "./ambulatori";
 import { registerPazienteRoutes } from "./pazienti";
 import { registerAppuntamentoRoutes } from "./appuntamenti";
@@ -19,7 +18,6 @@ import { registerSistemaTsRoutes } from "./sistema-ts";
 
 export function registerRoutes(app: Express): void {
   // Public routes.
-  registerPricingLeadRoutes(app);
   registerSetupRoutes(app);
   if (isInMemory) registerDemoRoutes(app);
 

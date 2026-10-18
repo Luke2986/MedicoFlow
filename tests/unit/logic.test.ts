@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { validateCodiceFiscale } from "../../shared/validators";
-import { hasFeature, getNextPlan, getPreviousPlan } from "../../shared/features";
 import { checkConflict } from "../../client/src/lib/calendar-utils";
 
 describe("validateCodiceFiscale", () => {
@@ -17,23 +16,6 @@ describe("validateCodiceFiscale", () => {
     expect(validateCodiceFiscale("")).toBe(false);
     expect(validateCodiceFiscale("RSSMRA85M01H501")).toBe(false);
     expect(validateCodiceFiscale("1SSMRA85M01H501Q")).toBe(false);
-  });
-});
-
-describe("plans", () => {
-  it("grants plan features and explicit extras only", () => {
-    const base = { piano: "BASE", features: [] as string[] };
-    expect(hasFeature(base, "export-pdf")).toBe(true);
-    expect(hasFeature(base, "ai-agent-search")).toBe(false);
-    expect(hasFeature({ ...base, features: ["ai-agent-search"] }, "ai-agent-search")).toBe(true);
-    expect(hasFeature(null, "export-pdf")).toBe(false);
-    expect(hasFeature({ piano: "SCONOSCIUTO", features: [] }, "export-pdf")).toBe(false);
-  });
-
-  it("walks the plan order", () => {
-    expect(getNextPlan("BASE")).toBe("PROFESSIONAL");
-    expect(getNextPlan("ENTERPRISE")).toBeNull();
-    expect(getPreviousPlan("BASE")).toBeNull();
   });
 });
 

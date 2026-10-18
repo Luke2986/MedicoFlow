@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   Building2,
-  CreditCard,
   Users,
   Bell,
   Shield,
@@ -17,7 +16,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { type Ambulatorio, type Subscription } from "@shared/schema";
+import { type Ambulatorio } from "@shared/schema";
 
 interface SettingsSection {
   title: string;
@@ -50,16 +49,6 @@ export default function Impostazioni() {
     enabled: !!ambulatorioId,
   });
 
-  const { data: subscription, isLoading: loadingSubscription } = useQuery<Subscription>({
-    queryKey: ["/api/subscription", ambulatorioId],
-    queryFn: async () => {
-      const res = await fetch(`/api/subscription?ambulatorioId=${ambulatorioId}`);
-      if (!res.ok) throw new Error("Errore caricamento subscription");
-      return res.json();
-    },
-    enabled: !!ambulatorioId,
-  });
-
   const sections: SettingsSection[] = [
     {
       title: "Dati Ambulatorio",
@@ -67,14 +56,6 @@ export default function Impostazioni() {
       icon: Building2,
       href: "/dashboard/impostazioni/ambulatorio",
       color: "purple"
-    },
-    {
-      title: "Piani & Fatturazione",
-      description: subscription ? `Piano attuale: ${subscription.piano}` : "Gestisci il tuo piano di abbonamento",
-      icon: CreditCard,
-      href: "/dashboard/impostazioni/billing",
-      color: "green",
-      badge: subscription?.piano === "PROFESSIONAL" ? "PRO" : subscription?.piano === "ENTERPRISE" ? "ENTERPRISE" : null
     },
     {
       title: "Aspetto",
@@ -128,7 +109,7 @@ export default function Impostazioni() {
     }
   ];
 
-  const isLoading = loadingAmbulatorio || loadingSubscription;
+  const isLoading = loadingAmbulatorio;
 
   return (
     <div className="space-y-6">
@@ -147,25 +128,12 @@ export default function Impostazioni() {
         <Skeleton className="h-24 w-full" />
       ) : (
         <Card className="bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800 p-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground mb-1" data-testid="text-ambulatorio-nome">
-                {ambulatorio?.nome || "Ambulatorio"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {ambulatorio?.citta}, {ambulatorio?.provincia} • {ambulatorio?.specializzazione}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Piano attuale</p>
-              <p className="font-semibold text-foreground" data-testid="text-piano-corrente">
-                {subscription?.piano || "BASE"}
-              </p>
-              {subscription?.status === "TRIAL" && (
-                <Badge variant="secondary" className="mt-1">Trial</Badge>
-              )}
-            </div>
-          </div>
+          <h2 className="text-lg font-semibold text-foreground mb-1" data-testid="text-ambulatorio-nome">
+            {ambulatorio?.nome || "Ambulatorio"}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {ambulatorio?.citta}, {ambulatorio?.provincia} • {ambulatorio?.specializzazione}
+          </p>
         </Card>
       )}
 

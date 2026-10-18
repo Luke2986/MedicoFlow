@@ -132,7 +132,7 @@ describe.skipIf(!hasDb)("API: authentication and per-clinic isolation", () => {
       const sara = await signIn(segreteria.email, segreteria.password);
       expect((await sara.get("/api/team")).body).toHaveLength(2);
       expect((await sara.post("/api/team").send({ ...segreteria, email: "x@studio-a.test" })).status).toBe(403);
-      expect((await sara.put("/api/subscription").send({ piano: "ENTERPRISE" })).status).toBe(403);
+      expect((await sara.get("/api/ai/audit")).status).toBe(403);
     });
 
     it("signs out every session when an admin resets a password", async () => {

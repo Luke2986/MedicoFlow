@@ -5,8 +5,6 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { validateCodiceFiscale } from "./validators";
 
-export const pianoEnum = pgEnum("piano", ["BASE", "PROFESSIONAL", "ENTERPRISE"]);
-export const subscriptionStatusEnum = pgEnum("subscription_status", ["ACTIVE", "CANCELLED", "EXPIRED", "TRIAL"]);
 
 export const specializations = pgTable("specializations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -188,22 +186,6 @@ export const visite = pgTable("visite", {
   medicoVisitaIdx: index("medico_visita_idx").on(table.medicoId),
 }));
 
-export const subscriptions = pgTable("subscriptions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  ambulatorioId: varchar("ambulatorio_id").notNull().unique().references(() => ambulatori.id),
-  piano: pianoEnum("piano").notNull().default("BASE"),
-  status: subscriptionStatusEnum("status").notNull().default("ACTIVE"),
-  prezzoMensile: integer("prezzo_mensile").notNull(),
-  features: text("features").array().notNull().default(sql`ARRAY[]::text[]`),
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
-  stripePriceId: text("stripe_price_id"),
-  dataInizio: timestamp("data_inizio").defaultNow().notNull(),
-  dataFine: timestamp("data_fine"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
 export const onboardingProgress = pgTable("onboarding_progress", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ambulatorioId: varchar("ambulatorio_id").notNull().unique().references(() => ambulatori.id),
@@ -224,10 +206,6 @@ export const ambulatoriRelations = relations(ambulatori, ({ many, one }) => ({
   pazienti: many(pazienti),
   appuntamenti: many(appuntamenti),
   visite: many(visite),
-  subscription: one(subscriptions, {
-    fields: [ambulatori.id],
-    references: [subscriptions.ambulatorioId],
-  }),
   onboardingProgress: one(onboardingProgress, {
     fields: [ambulatori.id],
     references: [onboardingProgress.ambulatorioId],
@@ -298,13 +276,6 @@ export const visiteRelations = relations(visite, ({ one }) => ({
   }),
 }));
 
-export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
-  ambulatorio: one(ambulatori, {
-    fields: [subscriptions.ambulatorioId],
-    references: [ambulatori.id],
-  }),
-}));
-
 export const onboardingProgressRelations = relations(onboardingProgress, ({ one }) => ({
   ambulatorio: one(ambulatori, {
     fields: [onboardingProgress.ambulatorioId],
@@ -319,32 +290,6 @@ export const specializationsRelations = relations(specializations, ({ many }) =>
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
   user: one(users, {
     fields: [userPreferences.userId],
-    references: [users.id],
-  }),
-}));
-
-export const aiUsage = pgTable("ai_usage", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  month: varchar("month", { length: 7 }).notNull(), // formato: "2025-01"
-  voiceNotesUsed: integer("voice_notes_used").notNull().default(0),
-  autoCompleteUsed: integer("auto_complete_used").notNull().default(0),
-  analyticsUsed: integer("analytics_used").notNull().default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  ambulatorioMonthIdx: index("ambulatorio_month_idx").on(table.ambulatorioId, table.month),
-  userMonthUnique: uniqueIndex("user_month_unique_idx").on(table.ambulatorioId, table.userId, table.month),
-}));
-
-export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
-  ambulatorio: one(ambulatori, {
-    fields: [aiUsage.ambulatorioId],
-    references: [ambulatori.id],
-  }),
-  user: one(users, {
-    fields: [aiUsage.userId],
     references: [users.id],
   }),
 }));
@@ -431,25 +376,6 @@ export type ConsensoAi = typeof consensiAi.$inferSelect;
 export type AiAuditEntry = typeof aiAuditLog.$inferSelect;
 export type InsertAiAuditEntry = typeof aiAuditLog.$inferInsert;
 
-export const leadStatusEnum = pgEnum("lead_status", ["NUOVO", "CONTATTATO", "CONVERTITO", "PERSO"]);
-
-export const pricingLeads = pgTable("pricing_leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull(),
-  nome: text("nome").notNull(),
-  ambulatorio: text("ambulatorio"),
-  telefono: varchar("telefono", { length: 20 }),
-  piano: pianoEnum("piano").notNull(),
-  note: text("note"),
-  status: leadStatusEnum("status").notNull().default("NUOVO"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  pianoIdx: index("piano_idx").on(table.piano),
-  statusIdx: index("status_idx").on(table.status),
-  createdAtIdx: index("created_at_idx").on(table.createdAt),
-  emailIdx: index("email_idx").on(table.email),
-}));
-
 export const insertAmbulatorioSchema = createInsertSchema(ambulatori).omit({
   id: true,
   createdAt: true,
@@ -534,17 +460,6 @@ export type InsertAppuntamento = z.infer<typeof insertAppuntamentoSchema>;
 export type Visita = typeof visite.$inferSelect;
 export type InsertVisita = z.infer<typeof insertVisitaSchema>;
 
-export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const updateSubscriptionSchema = insertSubscriptionSchema.partial();
-
-export type Subscription = typeof subscriptions.$inferSelect;
-export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
-
 export const insertOnboardingProgressSchema = createInsertSchema(onboardingProgress).omit({
   id: true,
   createdAt: true,
@@ -555,28 +470,6 @@ export const updateOnboardingProgressSchema = insertOnboardingProgressSchema.par
 
 export type OnboardingProgress = typeof onboardingProgress.$inferSelect;
 export type InsertOnboardingProgress = z.infer<typeof insertOnboardingProgressSchema>;
-
-export const insertAIUsageSchema = createInsertSchema(aiUsage).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type AIUsage = typeof aiUsage.$inferSelect;
-export type InsertAIUsage = z.infer<typeof insertAIUsageSchema>;
-
-export const insertPricingLeadSchema = createInsertSchema(pricingLeads).omit({
-  id: true,
-  createdAt: true,
-  status: true,
-});
-
-export const updatePricingLeadSchema = insertPricingLeadSchema.partial().extend({
-  status: z.enum(["NUOVO", "CONTATTATO", "CONVERTITO", "PERSO"]).optional(),
-});
-
-export type PricingLead = typeof pricingLeads.$inferSelect;
-export type InsertPricingLead = z.infer<typeof insertPricingLeadSchema>;
 
 export const insertSpecializationSchema = createInsertSchema(specializations).omit({
   id: true,

@@ -105,7 +105,6 @@ cp .env.example .env
 | `BETTER_AUTH_URL` | No | URL pubblico dell'app (es. `https://medicoflow.example.it`). Su Vercel viene ricavato in automatico; in locale il default è `http://localhost:5000` |
 | `PORT` | No | Porta del server (default `5000`) |
 | `GROQ_API_KEY` | No | Abilita la dettatura vocale (Whisper) e la proposta di referto con LLM. Senza chiave, nella demo in memoria dettatura e referto sono simulati; con un database esterno la dettatura resta disattivata e il referto si struttura con regole locali sulle sezioni dettate |
-| `ADMIN_TOKEN` | No | Abilita le rotte admin (elenco dei contatti raccolti dalla pagina prezzi). Senza token restano disattivate |
 | `TRUST_PROXY` | No | Numero di reverse proxy davanti al server (es. `1` dietro Nginx). Su Vercel non serve |
 | `TS_ENV` | No | Ambiente del Sistema Tessera Sanitaria: `test` (default) o `prod` |
 | `TS_CERT_PATH` / `TS_CERT_PEM` | No | Certificato di cifratura del kit di sviluppo del Sistema TS (percorso del file o contenuto PEM). Senza certificato l'invio diretto è disattivato e resta l'export CSV. Le credenziali TS dei medici si inseriscono a ogni invio e non vengono salvate |
@@ -140,7 +139,7 @@ Dopo l'accesso, l'amministratore aggiunge i colleghi da **Impostazioni → Team*
 
 | Ruolo | Cosa può fare |
 |---|---|
-| Amministratore | Tutto, compresi dati dell'ambulatorio, team e abbonamento |
+| Amministratore | Tutto, compresi dati dell'ambulatorio, team e registro AI |
 | Medico | Pazienti, appuntamenti, visite |
 | Segreteria | Pazienti e appuntamenti |
 

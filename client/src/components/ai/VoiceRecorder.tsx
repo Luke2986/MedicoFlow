@@ -5,8 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import type { ConsensoAi } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface VoiceRecorderProps {
@@ -17,14 +15,6 @@ interface VoiceRecorderProps {
   disabled?: boolean;
   /** Public demo without an AI provider: no microphone is opened and the server returns a simulated dictation. */
   simulazione?: boolean;
-}
-
-interface QuotaInfo {
-  allowed: boolean;
-  used: number;
-  limit: number;
-  resetDate: string;
-  percentageUsed: number;
 }
 
 export function VoiceRecorder({ 
@@ -39,9 +29,6 @@ export function VoiceRecorder({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [consensoMancante, setConsensoMancante] = useState(false);
-  const [quota, setQuota] = useState<QuotaInfo | null>(null);
-  const [plan, setPlan] = useState<string>('');
-  const [isLoadingQuota, setIsLoadingQuota] = useState(true);
   const { data: consensoData, isLoading: isLoadingConsenso } = useQuery<{ consenso: ConsensoAi | null; versioneCorrente: string }>({
     queryKey: ['/api/pazienti', pazienteId, 'consenso-ai'],
     queryFn: async () => {
@@ -56,26 +43,6 @@ export function VoiceRecorder({
   const [secondi, setSecondi] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-
-  useEffect(() => {
-    if (ambulatorioId && userId) {
-      fetchQuota();
-    }
-  }, [ambulatorioId, userId]);
-
-  const fetchQuota = async () => {
-    try {
-      setIsLoadingQuota(true);
-      const res = await fetch(`/api/ai/quota?ambulatorioId=${ambulatorioId}&userId=${userId}`);
-      const data = await res.json();
-      setQuota(data.voiceNotes);
-      setPlan(data.plan);
-    } catch (error) {
-      console.error('Errore fetch quota:', error);
-    } finally {
-      setIsLoadingQuota(false);
-    }
-  };
 
   useEffect(() => {
     if (!isRecording) return;
@@ -174,7 +141,6 @@ export function VoiceRecorder({
         throw new Error(data.error || 'Errore durante la trascrizione');
       }
 
-      setQuota(data.quota);
       onTranscriptionComplete(data.result);
     } catch (error: any) {
       setError(error.message || 'Errore durante la trascrizione');
@@ -198,49 +164,14 @@ export function VoiceRecorder({
     event.target.value = '';
   };
 
-  // Check if feature is available for current plan
-  const isFeatureAvailable = quota?.limit !== 0;
-  const isQuotaExceeded = quota ? !quota.allowed : false;
-
-  if (plan === 'BASE') {
-    return (
-      <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
-        <AlertTriangle className="h-4 w-4 text-orange-600" />
-        <AlertDescription className="text-orange-800 dark:text-orange-200">
-          <strong>Funzionalità AI disponibile da piano Professional</strong>
-          <p className="mt-1 text-sm">
-            Passa a Professional per sbloccare Voice-to-Clinical-Note e Smart Autocomplete.
-          </p>
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const bloccato = disabled || isProcessing || bloccatoPerConsenso;
 
   return (
     <Card className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Voice-to-Clinical-Note</h3>
-          <Badge variant="outline" className="text-xs">
-            {plan}
-          </Badge>
-        </div>
-        {quota && quota.limit !== -1 && (
-          <div className="text-sm text-muted-foreground">
-            {quota.used}/{quota.limit} usati
-          </div>
-        )}
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h3 className="font-semibold">Voice-to-Clinical-Note</h3>
       </div>
-
-      {quota && quota.limit !== -1 && (
-        <div className="space-y-1">
-          <Progress value={quota.percentageUsed} className="h-2" />
-          <p className="text-xs text-muted-foreground">
-            Reset: {new Date(quota.resetDate).toLocaleDateString('it-IT')}
-          </p>
-        </div>
-      )}
 
       {!pazienteId && (
         <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
@@ -295,7 +226,7 @@ export function VoiceRecorder({
       <div className="flex gap-2">
         <Button
           onClick={isRecording ? stopRecording : startRecording}
-          disabled={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso}
+          disabled={bloccato}
           variant={isRecording ? 'destructive' : 'default'}
           className="flex-1"
           data-testid="button-voice-record"
@@ -316,9 +247,9 @@ export function VoiceRecorder({
         <label>
           <Button
             variant="outline"
-            disabled={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso}
+            disabled={bloccato}
             asChild
-            className={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+            className={bloccato ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
             data-testid="button-voice-upload"
           >
             <span>
@@ -331,7 +262,7 @@ export function VoiceRecorder({
             accept="audio/*"
             onChange={handleFileUpload}
             className="hidden"
-            disabled={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso}
+            disabled={bloccato}
           />
         </label>
       </div>
@@ -370,15 +301,6 @@ export function VoiceRecorder({
                 Registra l'informativa AI nella scheda del paziente
               </Link>
             )}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {isQuotaExceeded && quota && (
-        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
-          <AlertTriangle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800 dark:text-orange-200">
-            Limite mensile raggiunto. Reset: {new Date(quota.resetDate).toLocaleDateString('it-IT')}
           </AlertDescription>
         </Alert>
       )}

@@ -5,8 +5,6 @@ import {
   pazienti, 
   appuntamenti,
   visite,
-  subscriptions,
-  pricingLeads,
   themeSettings,
   onboardingProgress,
   specializations,
@@ -30,10 +28,6 @@ import {
   type InsertAppuntamento,
   type Visita,
   type InsertVisita,
-  type Subscription,
-  type InsertSubscription,
-  type PricingLead,
-  type InsertPricingLead,
   type ThemeSettings,
   type InsertThemeSettings,
   type OnboardingProgress,
@@ -90,16 +84,6 @@ export interface IStorage {
   createVisita(visita: InsertVisita & { medicoId: string }): Promise<Visita>;
   updateVisita(id: string, visita: Partial<InsertVisita>): Promise<Visita>;
   deleteVisita(id: string): Promise<void>;
-  
-  getSubscription(ambulatorioId: string): Promise<Subscription | undefined>;
-  getAllSubscriptions(): Promise<Subscription[]>;
-  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
-  updateSubscription(ambulatorioId: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
-  
-  getPricingLeads(): Promise<PricingLead[]>;
-  getPricingLead(id: string): Promise<PricingLead | undefined>;
-  createPricingLead(lead: InsertPricingLead): Promise<PricingLead>;
-  updatePricingLeadStatus(id: string, status: "NUOVO" | "CONTATTATO" | "CONVERTITO" | "PERSO"): Promise<PricingLead>;
   
   getThemeSettings(ambulatorioId: string): Promise<ThemeSettings | undefined>;
   upsertThemeSettings(ambulatorioId: string, settings: InsertThemeSettings): Promise<ThemeSettings>;
@@ -469,68 +453,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVisita(id: string): Promise<void> {
     await db.delete(visite).where(eq(visite.id, id));
-  }
-
-  async getSubscription(ambulatorioId: string): Promise<Subscription | undefined> {
-    const [subscription] = await db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.ambulatorioId, ambulatorioId));
-    return subscription || undefined;
-  }
-
-  async getAllSubscriptions(): Promise<Subscription[]> {
-    return await db.select().from(subscriptions);
-  }
-
-  async createSubscription(insertSubscription: InsertSubscription): Promise<Subscription> {
-    const [subscription] = await db
-      .insert(subscriptions)
-      .values(insertSubscription)
-      .returning();
-    return subscription;
-  }
-
-  async updateSubscription(ambulatorioId: string, updateData: Partial<InsertSubscription>): Promise<Subscription> {
-    const [subscription] = await db
-      .update(subscriptions)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(eq(subscriptions.ambulatorioId, ambulatorioId))
-      .returning();
-    return subscription;
-  }
-
-  async getPricingLeads(): Promise<PricingLead[]> {
-    return await db
-      .select()
-      .from(pricingLeads)
-      .orderBy(desc(pricingLeads.createdAt));
-  }
-
-  async getPricingLead(id: string): Promise<PricingLead | undefined> {
-    const [lead] = await db
-      .select()
-      .from(pricingLeads)
-      .where(eq(pricingLeads.id, id));
-    return lead || undefined;
-  }
-
-  async createPricingLead(insertLead: InsertPricingLead): Promise<PricingLead> {
-    const [lead] = await db
-      .insert(pricingLeads)
-      .values(insertLead)
-      .returning();
-    return lead;
-  }
-
-  async updatePricingLeadStatus(id: string, status: "NUOVO" | "CONTATTATO" | "CONVERTITO" | "PERSO"): Promise<PricingLead> {
-    const [lead] = await db
-      .update(pricingLeads)
-      .set({ status })
-      .where(eq(pricingLeads.id, id))
-      .returning();
-    if (!lead) throw new Error("Lead non trovato");
-    return lead;
   }
 
   async getThemeSettings(ambulatorioId: string): Promise<ThemeSettings | undefined> {

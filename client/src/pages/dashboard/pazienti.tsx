@@ -11,9 +11,6 @@ import { useState, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useIsMobile } from "@/hooks/use-mobile";
 import AutocompleteSearch from "@/components/AutocompleteSearch";
-import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { hasFeature } from "@shared/features";
-import type { Subscription } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -95,20 +92,6 @@ export default function Pazienti() {
 
   const pazientiData = data?.pazienti || [];
   const pagination = data?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 };
-
-  // Query subscription per feature flags
-  const { data: subscription } = useQuery<Subscription>({
-    queryKey: ["/api/subscription", ambulatorioId],
-    queryFn: async () => {
-      const res = await fetch(`/api/subscription?ambulatorioId=${ambulatorioId}`);
-      if (!res.ok) throw new Error("Errore caricamento subscription");
-      return res.json();
-    },
-    enabled: !!ambulatorioId,
-  });
-
-  // Check se ha accesso fuzzy search
-  const hasFuzzySearch = subscription ? hasFeature(subscription, 'fuzzy-search') : false;
 
   // Funzione Export CSV
   const handleExportCSV = () => {
@@ -557,31 +540,17 @@ export default function Pazienti() {
         </DialogContent>
       </Dialog>
 
-      {/* AI Agent Search - Feature Premium */}
-      {hasFuzzySearch ? (
-        <Card className="p-6 bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
-                AI Agent Search
-              </h2>
-              <span className="text-xs text-muted-foreground px-2 py-1 bg-background/50 rounded">
-                Premium Feature
-              </span>
-            </div>
-            <AutocompleteSearch pazienti={pazienti} />
-            <p className="text-sm text-muted-foreground">
-              💡 <span className="font-medium">Suggerimento:</span> Prova con typo come "Maro" (trova Mario), "333" (telefono), "MI" (Milano)
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <UpgradePrompt 
-          featureName="AI Agent Search"
-          requiredPlan="PROFESSIONAL"
-          description="Ricerca intelligente con tolleranza ai typo, autocomplete e fuzzy matching. Trova pazienti anche con errori di digitazione."
-        />
-      )}
+      <Card className="p-6 bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            AI Agent Search
+          </h2>
+          <AutocompleteSearch pazienti={pazienti} />
+          <p className="text-sm text-muted-foreground">
+            💡 <span className="font-medium">Suggerimento:</span> Prova con typo come "Maro" (trova Mario), "333" (telefono), "MI" (Milano)
+          </p>
+        </div>
+      </Card>
 
       <Card className="p-3 sm:p-6">
         <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">

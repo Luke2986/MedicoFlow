@@ -12,13 +12,11 @@ import {
   onboardingProgress,
   pazienti,
   specializations,
-  subscriptions,
   users,
   visite,
   type Ruolo,
   type VoceSpesa,
 } from "../../shared/schema";
-import { PLANS } from "../../shared/features";
 import { INFORMATIVA_AI_VERSIONE } from "../../shared/informativa-ai";
 import { richiedeBollo, totaleVociCentesimi, type MetodoPagamento } from "../../shared/fiscale";
 import { MODELLO_SIMULATO, PROVIDER_SIMULATO } from "../ai/simulazione";
@@ -279,17 +277,6 @@ export async function seedDemo() {
     specializzazione: "Medicina Generale",
     specializationId: medicinaGenerale?.id,
   }).returning();
-
-  const trialEnd = new Date();
-  trialEnd.setDate(trialEnd.getDate() + 21);
-  await db.insert(subscriptions).values({
-    ambulatorioId: ambulatorio.id,
-    piano: "PROFESSIONAL",
-    status: "TRIAL",
-    prezzoMensile: PLANS.PROFESSIONAL.price * 100,
-    features: [...PLANS.PROFESSIONAL.features],
-    dataFine: trialEnd,
-  });
 
   await db.insert(onboardingProgress).values({
     ambulatorioId: ambulatorio.id,
