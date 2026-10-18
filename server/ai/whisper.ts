@@ -5,7 +5,7 @@ import { correctMedicalText } from "./medical-dictionary";
 let groq: OpenAI | undefined;
 
 // Groq exposes an OpenAI-compatible API; the client is created lazily so the key stays optional.
-function getGroq(): OpenAI {
+export function getGroq(): OpenAI {
   if (!process.env.GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY non impostata: la dettatura vocale è disabilitata.");
   }
@@ -15,6 +15,9 @@ function getGroq(): OpenAI {
   });
   return groq;
 }
+
+export const TRANSCRIPTION_PROVIDER = "groq";
+export const TRANSCRIPTION_MODEL = "whisper-large-v3";
 
 export interface TranscriptionResult {
   text: string;
@@ -29,7 +32,7 @@ export async function transcribeAudio(
     // Trascrivi audio con Whisper su Groq (solo testo grezzo)
     const transcription = await getGroq().audio.transcriptions.create({
       file: audioFile,
-      model: 'whisper-large-v3',
+      model: TRANSCRIPTION_MODEL,
       language: 'it',
       response_format: 'text'
     });
@@ -38,12 +41,6 @@ export async function transcribeAudio(
 
     // Post-processing: correggi termini medici
     const { correctedText, corrections } = correctMedicalText(rawText);
-
-    console.log('Trascrizione raw:', rawText);
-    if (corrections.length > 0) {
-      console.log('Correzioni applicate:', corrections.length);
-      console.log('Correzioni:', corrections);
-    }
 
     return {
       text: rawText, // Mantieni il testo raw originale

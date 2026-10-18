@@ -1,14 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill, Copy } from "lucide-react";
+import { Plus, FileText, Calendar as CalendarIcon, User, Activity, Pencil, Trash2, ChevronRight, AlertTriangle, Phone, Mail, ArrowLeft, Stethoscope, Pill } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
 import { useUser } from "@/lib/useUser";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { VoiceRecorder } from "@/components/ai/VoiceRecorder";
+import { AssistenteReferto } from "@/components/ai/AssistenteReferto";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { MotoreReferto } from "@shared/referto";
 import {
   Dialog,
   DialogContent,
@@ -52,8 +54,12 @@ export default function CartellaClinica() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVisita, setSelectedVisita] = useState<Visita | null>(null);
-  const [transcriptionText, setTranscriptionText] = useState<string>("");
-  const [editTranscriptionText, setEditTranscriptionText] = useState<string>("");
+  const createFormRef = useRef<HTMLFormElement>(null);
+  const editFormRef = useRef<HTMLFormElement>(null);
+  // Set once AI-proposed values are written into the open form; saving then requires the doctor's confirmation.
+  const [refertoAi, setRefertoAi] = useState<{ motore: MotoreReferto; confermato: boolean } | null>(null);
+  const datiReferto = () =>
+    refertoAi ? { referto: { daAi: true, motore: refertoAi.motore, revisioneConfermata: refertoAi.confermato } } : {};
   const { toast } = useToast();
 
   // Leggi pazienteId da URL params e seleziona automaticamente
@@ -94,7 +100,7 @@ export default function CartellaClinica() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/visite"] });
       setDialogOpen(false);
-      setTranscriptionText(""); // Reset trascrizione
+      setRefertoAi(null);
       toast({
         title: "Visita registrata",
         description: "La visita è stata aggiunta alla cartella clinica",
@@ -117,6 +123,7 @@ export default function CartellaClinica() {
       queryClient.invalidateQueries({ queryKey: ["/api/visite"] });
       setEditDialogOpen(false);
       setSelectedVisita(null);
+      setRefertoAi(null);
       toast({
         title: "Visita aggiornata",
         description: "La visita è stata modificata con successo",
@@ -146,25 +153,6 @@ export default function CartellaClinica() {
     },
   });
 
-  const handleTranscription = (result: any) => {
-    console.log('Trascrizione ricevuta:', result);
-    
-    // Usa il testo corretto se disponibile, altrimenti il testo raw
-    const textToUse = result?.correctedText || result?.text;
-    
-    if (textToUse) {
-      setTranscriptionText(textToUse);
-      
-      const correctionCount = result?.corrections?.length || 0;
-      toast({
-        title: "Trascrizione completata",
-        description: correctionCount > 0 
-          ? `${correctionCount} termini medici corretti automaticamente`
-          : "Il testo è stato trascritto correttamente",
-      });
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -187,6 +175,7 @@ export default function CartellaClinica() {
       frequenzaCardiaca: formData.get("frequenzaCardiaca") ? parseInt(formData.get("frequenzaCardiaca") as string) : null,
       temperatura: formData.get("temperatura") ? parseInt(formData.get("temperatura") as string) : null,
       ambulatorioId,
+      ...datiReferto(),
     };
 
     createMutation.mutate(data);
@@ -216,7 +205,7 @@ export default function CartellaClinica() {
       temperatura: formData.get("temperatura") ? parseInt(formData.get("temperatura") as string) : null,
     };
 
-    updateMutation.mutate({ id: selectedVisita.id, data });
+    updateMutation.mutate({ id: selectedVisita.id, data: { ...data, ...datiReferto() } });
   };
 
   const pazienteSelezionato = pazienti.find(p => p.id === selectedPaziente);
@@ -569,12 +558,7 @@ export default function CartellaClinica() {
 
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         setDialogOpen(open);
-        if (!open) {
-          setTranscriptionText("");
-          // Reset anche il campo note cliniche
-          const noteField = document.getElementById('noteCliniche') as HTMLTextAreaElement;
-          if (noteField) noteField.value = "";
-        }
+        if (!open) setRefertoAi(null);
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -584,73 +568,15 @@ export default function CartellaClinica() {
             </DialogDescription>
           </DialogHeader>
           
-          <VoiceRecorder 
+          <AssistenteReferto
             ambulatorioId={ambulatorioId}
             userId={userId}
-            onTranscriptionComplete={handleTranscription}
+            pazienteId={selectedPaziente || undefined}
             disabled={createMutation.isPending}
+            formRef={createFormRef}
+            onApplicato={(motore) => setRefertoAi({ motore, confermato: false })}
           />
-
-          {transcriptionText && (
-            <div className="space-y-3">
-              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                <CardContent className="pt-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <Label htmlFor="transcription" className="text-blue-900 dark:text-blue-100 font-semibold">
-                          Trascrizione Audio
-                        </Label>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        Verificabile/Editabile
-                      </Badge>
-                    </div>
-                    <Textarea
-                      id="transcription"
-                      value={transcriptionText}
-                      onChange={(e) => setTranscriptionText(e.target.value)}
-                      className="min-h-[120px] bg-white dark:bg-gray-950 font-mono text-sm"
-                      placeholder="La trascrizione apparirà qui..."
-                      data-testid="textarea-transcription"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => {
-                        const noteField = document.getElementById('noteCliniche') as HTMLTextAreaElement;
-                        if (noteField) {
-                          noteField.value = transcriptionText;
-                          toast({
-                            title: "Trascrizione copiata",
-                            description: "La trascrizione è stata copiata nelle note cliniche",
-                          });
-                        }
-                      }}
-                      data-testid="button-copy-transcription"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copia nelle Note Cliniche
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Warning: Verifica sempre la trascrizione */}
-              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200">
-                  <strong>Verifica obbligatoria:</strong> La trascrizione automatica può contenere errori. 
-                  Leggi attentamente e correggi eventuali inesattezze prima di copiare nei campi della visita.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
+          <form ref={createFormRef} onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -821,11 +747,24 @@ export default function CartellaClinica() {
                 />
               </div>
             </div>
+            {refertoAi && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 mb-3" data-testid="conferma-revisione-ai">
+                <Checkbox
+                  id="conferma-ai-nuova"
+                  checked={refertoAi.confermato}
+                  onCheckedChange={(v) => setRefertoAi({ ...refertoAi, confermato: v === true })}
+                  data-testid="checkbox-conferma-revisione-ai"
+                />
+                <Label htmlFor="conferma-ai-nuova" className="text-sm leading-snug">
+                  Ho riletto i campi compilati con la proposta {refertoAi.motore === "regole" ? "automatica" : "dell'AI"} e ne confermo il contenuto.
+                </Label>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-create">
                 Annulla
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || !ambulatorioId} data-testid="button-salva-visita">
+              <Button type="submit" disabled={createMutation.isPending || !ambulatorioId || (!!refertoAi && !refertoAi.confermato)} data-testid="button-salva-visita">
                 {createMutation.isPending ? "Salvataggio..." : "Salva Visita"}
               </Button>
             </DialogFooter>
@@ -835,7 +774,7 @@ export default function CartellaClinica() {
 
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
         setEditDialogOpen(open);
-        if (!open) setEditTranscriptionText("");
+        if (!open) setRefertoAi(null);
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -845,76 +784,17 @@ export default function CartellaClinica() {
             </DialogDescription>
           </DialogHeader>
           
-          <VoiceRecorder 
+          <AssistenteReferto
             ambulatorioId={ambulatorioId}
             userId={userId}
-            onTranscriptionComplete={(result) => {
-              const text = result.correctedText || result.text;
-              setEditTranscriptionText(text);
-            }}
+            pazienteId={selectedVisita?.pazienteId ?? (selectedPaziente || undefined)}
             disabled={updateMutation.isPending}
+            formRef={editFormRef}
+            onApplicato={(motore) => setRefertoAi({ motore, confermato: false })}
           />
 
-          {editTranscriptionText && (
-            <div className="space-y-3">
-              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                <CardContent className="pt-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <Label htmlFor="edit-transcription" className="text-blue-900 dark:text-blue-100 font-semibold">
-                          Trascrizione Audio
-                        </Label>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        Verificabile/Editabile
-                      </Badge>
-                    </div>
-                    <Textarea
-                      id="edit-transcription"
-                      value={editTranscriptionText}
-                      onChange={(e) => setEditTranscriptionText(e.target.value)}
-                      className="min-h-[120px] bg-white dark:bg-gray-950 font-mono text-sm"
-                      placeholder="La trascrizione apparirà qui..."
-                      data-testid="textarea-edit-transcription"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => {
-                        const noteField = document.getElementById('edit-noteCliniche') as HTMLTextAreaElement;
-                        if (noteField) {
-                          noteField.value = editTranscriptionText;
-                          toast({
-                            title: "Trascrizione copiata",
-                            description: "La trascrizione è stata copiata nelle note cliniche",
-                          });
-                        }
-                      }}
-                      data-testid="button-copy-edit-transcription"
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copia nelle Note Cliniche
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200">
-                  <strong>Verifica obbligatoria:</strong> La trascrizione automatica può contenere errori. 
-                  Leggi attentamente e correggi eventuali inesattezze prima di copiare nei campi della visita.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-          
           {selectedVisita && (
-            <form onSubmit={handleEditSubmit}>
+            <form ref={editFormRef} onSubmit={handleEditSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1086,11 +966,24 @@ export default function CartellaClinica() {
                   />
                 </div>
               </div>
+              {refertoAi && (
+                <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3 mb-3" data-testid="conferma-revisione-ai">
+                  <Checkbox
+                    id="conferma-ai-modifica"
+                    checked={refertoAi.confermato}
+                    onCheckedChange={(v) => setRefertoAi({ ...refertoAi, confermato: v === true })}
+                    data-testid="checkbox-conferma-revisione-ai"
+                  />
+                  <Label htmlFor="conferma-ai-modifica" className="text-sm leading-snug">
+                    Ho riletto i campi compilati con la proposta {refertoAi.motore === "regole" ? "automatica" : "dell'AI"} e ne confermo il contenuto.
+                  </Label>
+                </div>
+              )}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)} data-testid="button-cancel-edit">
                   Annulla
                 </Button>
-                <Button type="submit" disabled={updateMutation.isPending} data-testid="button-aggiorna-visita">
+                <Button type="submit" disabled={updateMutation.isPending || (!!refertoAi && !refertoAi.confermato)} data-testid="button-aggiorna-visita">
                   {updateMutation.isPending ? "Aggiornamento..." : "Aggiorna Visita"}
                 </Button>
               </DialogFooter>

@@ -11,6 +11,15 @@ import {
   onboardingProgress,
   specializations,
   userPreferences,
+  consensiAi,
+  aiAuditLog,
+  documentiSpesa,
+  type DocumentoSpesa,
+  type InsertDocumentoSpesa,
+  type MessaggioTs,
+  type ConsensoAi,
+  type AiAuditEntry,
+  type InsertAiAuditEntry,
   type Ambulatorio, 
   type InsertAmbulatorio,
   type User, 
@@ -35,7 +44,7 @@ import {
   type InsertUserPreferences,
 } from "../shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, sql } from "drizzle-orm";
+import { eq, desc, and, or, like, sql, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getAllAmbulatori(): Promise<Ambulatorio[]>;
@@ -106,6 +115,41 @@ export interface IStorage {
   getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
   upsertUserPreferences(userId: string, preferences: Partial<InsertUserPreferences>): Promise<UserPreferences>;
   deleteUserPreferences(userId: string): Promise<void>;
+
+  getConsensoAiAttivo(pazienteId: string): Promise<ConsensoAi | undefined>;
+  createConsensoAi(data: { ambulatorioId: string; pazienteId: string; versioneInformativa: string; consensoRegistrazione: boolean; raccoltoDa: string }): Promise<ConsensoAi>;
+  revocaConsensiAi(pazienteId: string): Promise<void>;
+  logAiUsage(entry: InsertAiAuditEntry): Promise<void>;
+  getAiAuditLog(ambulatorioId: string, limit: number): Promise<AiAuditRow[]>;
+
+  updateUserFiscale(id: string, data: DatiFiscaliUtente): Promise<User>;
+  getDocumentiSpesa(ambulatorioId: string, filtri: { anno?: number; emittenteId?: string; pazienteId?: string; statoTs?: string }): Promise<DocumentoSpesaRow[]>;
+  getDocumentoSpesa(id: string): Promise<DocumentoSpesa | undefined>;
+  createDocumentoSpesa(data: Omit<InsertDocumentoSpesa, "id" | "numero" | "createdAt">): Promise<DocumentoSpesa>;
+  updateDocumentoSpesa(id: string, data: Partial<InsertDocumentoSpesa>): Promise<DocumentoSpesa>;
+  deleteDocumentoSpesa(id: string): Promise<void>;
+  registraEsitoTs(id: string, esito: { statoTs: string; esitoTs: number | null; protocolloTs: string | null; messaggiTs: MessaggioTs[] }): Promise<void>;
+}
+
+export interface DatiFiscaliUtente {
+  codiceFiscale: string | null;
+  partitaIva: string | null;
+  regimeFiscale: string | null;
+  naturaIvaDefault: string | null;
+}
+
+export type DocumentoSpesaRow = DocumentoSpesa & { pazienteNome: string; emittenteNome: string };
+
+export interface AiAuditRow {
+  id: string;
+  azione: string;
+  provider: string;
+  modello: string;
+  byteAudio: number | null;
+  esito: string;
+  createdAt: Date;
+  utenteNome: string;
+  pazienteNome: string | null;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -600,6 +644,130 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(userPreferences)
       .where(eq(userPreferences.userId, userId));
+  }
+
+  async getConsensoAiAttivo(pazienteId: string): Promise<ConsensoAi | undefined> {
+    const [consenso] = await db
+      .select()
+      .from(consensiAi)
+      .where(and(eq(consensiAi.pazienteId, pazienteId), isNull(consensiAi.revocatoAt)))
+      .orderBy(desc(consensiAi.createdAt))
+      .limit(1);
+    return consenso || undefined;
+  }
+
+  async createConsensoAi(data: { ambulatorioId: string; pazienteId: string; versioneInformativa: string; consensoRegistrazione: boolean; raccoltoDa: string }): Promise<ConsensoAi> {
+    // A new answer supersedes the previous one, so at most one consent per patient is active.
+    await this.revocaConsensiAi(data.pazienteId);
+    const [consenso] = await db.insert(consensiAi).values(data).returning();
+    return consenso;
+  }
+
+  async revocaConsensiAi(pazienteId: string): Promise<void> {
+    await db
+      .update(consensiAi)
+      .set({ revocatoAt: new Date() })
+      .where(and(eq(consensiAi.pazienteId, pazienteId), isNull(consensiAi.revocatoAt)));
+  }
+
+  async logAiUsage(entry: InsertAiAuditEntry): Promise<void> {
+    await db.insert(aiAuditLog).values(entry);
+  }
+
+  async getAiAuditLog(ambulatorioId: string, limit: number): Promise<AiAuditRow[]> {
+    return await db
+      .select({
+        id: aiAuditLog.id,
+        azione: aiAuditLog.azione,
+        provider: aiAuditLog.provider,
+        modello: aiAuditLog.modello,
+        byteAudio: aiAuditLog.byteAudio,
+        esito: aiAuditLog.esito,
+        createdAt: aiAuditLog.createdAt,
+        utenteNome: sql<string>`${users.nome} || ' ' || ${users.cognome}`,
+        pazienteNome: sql<string | null>`${pazienti.cognome} || ' ' || ${pazienti.nome}`,
+      })
+      .from(aiAuditLog)
+      .innerJoin(users, eq(aiAuditLog.userId, users.id))
+      .leftJoin(pazienti, eq(aiAuditLog.pazienteId, pazienti.id))
+      .where(eq(aiAuditLog.ambulatorioId, ambulatorioId))
+      .orderBy(desc(aiAuditLog.createdAt))
+      .limit(limit);
+  }
+
+  async updateUserFiscale(id: string, data: DatiFiscaliUtente): Promise<User> {
+    const [user] = await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, id)).returning();
+    return user;
+  }
+
+  async getDocumentiSpesa(
+    ambulatorioId: string,
+    filtri: { anno?: number; emittenteId?: string; pazienteId?: string; statoTs?: string },
+  ): Promise<DocumentoSpesaRow[]> {
+    const conditions = [eq(documentiSpesa.ambulatorioId, ambulatorioId)];
+    if (filtri.anno) conditions.push(eq(documentiSpesa.anno, filtri.anno));
+    if (filtri.emittenteId) conditions.push(eq(documentiSpesa.emittenteId, filtri.emittenteId));
+    if (filtri.pazienteId) conditions.push(eq(documentiSpesa.pazienteId, filtri.pazienteId));
+    if (filtri.statoTs) conditions.push(eq(documentiSpesa.statoTs, filtri.statoTs));
+    const rows = await db
+      .select({
+        documento: documentiSpesa,
+        pazienteNome: sql<string>`${pazienti.cognome} || ' ' || ${pazienti.nome}`,
+        emittenteNome: sql<string>`${users.nome} || ' ' || ${users.cognome}`,
+      })
+      .from(documentiSpesa)
+      .innerJoin(pazienti, eq(documentiSpesa.pazienteId, pazienti.id))
+      .innerJoin(users, eq(documentiSpesa.emittenteId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(documentiSpesa.anno), desc(documentiSpesa.numero));
+    return rows.map((r) => ({ ...r.documento, pazienteNome: r.pazienteNome, emittenteNome: r.emittenteNome }));
+  }
+
+  async getDocumentoSpesa(id: string): Promise<DocumentoSpesa | undefined> {
+    const [doc] = await db.select().from(documentiSpesa).where(eq(documentiSpesa.id, id));
+    return doc || undefined;
+  }
+
+  async createDocumentoSpesa(data: Omit<InsertDocumentoSpesa, "id" | "numero" | "createdAt">): Promise<DocumentoSpesa> {
+    // Two concurrent issues can read the same max; the unique index rejects the loser, which then retries.
+    for (let tentativo = 0; tentativo < 3; tentativo++) {
+      try {
+        return await db.transaction(async (tx) => {
+          const [{ ultimo }] = await tx
+            .select({ ultimo: sql<number>`coalesce(max(${documentiSpesa.numero}), 0)` })
+            .from(documentiSpesa)
+            .where(and(eq(documentiSpesa.emittenteId, data.emittenteId), eq(documentiSpesa.anno, data.anno)));
+          const [doc] = await tx
+            .insert(documentiSpesa)
+            .values({ ...data, numero: Number(ultimo) + 1 })
+            .returning();
+          return doc;
+        });
+      } catch (error: any) {
+        const code = error?.code ?? error?.cause?.code;
+        if (code !== "23505" || tentativo === 2) throw error;
+      }
+    }
+    throw new Error("Numerazione documento non riuscita");
+  }
+
+  async updateDocumentoSpesa(id: string, data: Partial<InsertDocumentoSpesa>): Promise<DocumentoSpesa> {
+    const [doc] = await db.update(documentiSpesa).set(data).where(eq(documentiSpesa.id, id)).returning();
+    return doc;
+  }
+
+  async deleteDocumentoSpesa(id: string): Promise<void> {
+    await db.delete(documentiSpesa).where(eq(documentiSpesa.id, id));
+  }
+
+  async registraEsitoTs(
+    id: string,
+    esito: { statoTs: string; esitoTs: number | null; protocolloTs: string | null; messaggiTs: MessaggioTs[] },
+  ): Promise<void> {
+    await db
+      .update(documentiSpesa)
+      .set({ ...esito, inviatoAt: esito.statoTs === "inviato" ? new Date() : null })
+      .where(eq(documentiSpesa.id, id));
   }
 }
 

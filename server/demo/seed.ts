@@ -4,8 +4,11 @@ import { db } from "../db";
 import { auth } from "../auth";
 import {
   account,
+  aiAuditLog,
   ambulatori,
   appuntamenti,
+  consensiAi,
+  documentiSpesa,
   onboardingProgress,
   pazienti,
   specializations,
@@ -13,8 +16,12 @@ import {
   users,
   visite,
   type Ruolo,
+  type VoceSpesa,
 } from "../../shared/schema";
 import { PLANS } from "../../shared/features";
+import { INFORMATIVA_AI_VERSIONE } from "../../shared/informativa-ai";
+import { richiedeBollo, totaleVociCentesimi, type MetodoPagamento } from "../../shared/fiscale";
+import { MODELLO_SIMULATO, PROVIDER_SIMULATO } from "../ai/simulazione";
 import { buildCodiceFiscale } from "./codice-fiscale";
 
 // Every name, address, phone number and clinical record below is invented.
@@ -180,12 +187,18 @@ const QUADRI: Record<Condizione, QuadroClinico> = {
   },
 };
 
-const STAFF: { nome: string; cognome: string; email: string; ruolo: Ruolo }[] = [
-  { nome: "Chiara", cognome: "Fontana", email: "chiara.fontana@santalucia.demo", ruolo: "admin" },
-  { nome: "Marco", cognome: "Ferrari", email: "marco.ferrari@santalucia.demo", ruolo: "medico" },
-  { nome: "Elena", cognome: "Colombo", email: "elena.colombo@santalucia.demo", ruolo: "medico" },
+type DatiFiscaliDemo = { nascita: string; sesso: "M" | "F"; partitaIva: string; regime: "ordinario" | "forfettario"; natura: string };
+
+// VAT numbers have a wrong check digit on purpose, so none of them can belong to a real business.
+const STAFF: { nome: string; cognome: string; email: string; ruolo: Ruolo; fiscale?: DatiFiscaliDemo }[] = [
+  { nome: "Chiara", cognome: "Fontana", email: "chiara.fontana@santalucia.demo", ruolo: "admin", fiscale: { nascita: "1978-04-12", sesso: "F", partitaIva: "12345678901", regime: "ordinario", natura: "N4" } },
+  { nome: "Marco", cognome: "Ferrari", email: "marco.ferrari@santalucia.demo", ruolo: "medico", fiscale: { nascita: "1972-09-03", sesso: "M", partitaIva: "23456789012", regime: "forfettario", natura: "N2.2" } },
+  { nome: "Elena", cognome: "Colombo", email: "elena.colombo@santalucia.demo", ruolo: "medico", fiscale: { nascita: "1984-01-27", sesso: "F", partitaIva: "34567890124", regime: "ordinario", natura: "N4" } },
   { nome: "Sara", cognome: "Galli", email: "sara.galli@santalucia.demo", ruolo: "segreteria" },
 ];
+
+const TARIFFE: Record<string, number> = { "prima-visita": 15000, controllo: 10000, telemedicina: 6000, urgente: 12000 };
+const METODI: MetodoPagamento[] = ["pos", "pos", "pos", "pos", "contanti", "contanti", "bonifico", "bonifico", "assegno"];
 
 // Deterministic pseudo-random sequence, so every reset produces the same clinic.
 function mulberry32(seed: number) {
@@ -299,6 +312,12 @@ export async function seedDemo() {
     ruolo: s.ruolo,
     ambulatorioId: ambulatorio.id,
     emailVerified: true,
+    ...(s.fiscale && {
+      codiceFiscale: buildCodiceFiscale({ nome: s.nome, cognome: s.cognome, dataNascita: new Date(`${s.fiscale.nascita}T00:00:00Z`), sesso: s.fiscale.sesso, codiceComune: "F205" }),
+      partitaIva: s.fiscale.partitaIva,
+      regimeFiscale: s.fiscale.regime,
+      naturaIvaDefault: s.fiscale.natura,
+    }),
   }))).returning();
   await db.insert(account).values(staff.map((u) => ({
     id: stableId(`account:${u.email}`),
@@ -425,4 +444,85 @@ export async function seedDemo() {
     }
   }
   await db.insert(visite).values(visiteRows);
+
+  // AI notice: everyone registered before this week has consented, except one patient who refused.
+  // The two newest patients have not received it yet, so the dictation lock is visible in the demo.
+  const segreteria = staff.find((u) => u.ruolo === "segreteria")!;
+  const RIFIUTA = PAZIENTI.findIndex((p) => p.cognome === "Caruso");
+  await db.insert(consensiAi).values(
+    createdPazienti.slice(0, -2).map((p, i) => ({
+      id: stableId(`consenso:${p.id}`),
+      ambulatorioId: ambulatorio.id,
+      pazienteId: p.id,
+      versioneInformativa: INFORMATIVA_AI_VERSIONE,
+      consensoRegistrazione: i !== RIFIUTA,
+      raccoltoDa: segreteria.id,
+      createdAt: p.createdAt,
+    })),
+  );
+  const conConsenso = new Set(createdPazienti.slice(0, -2).filter((_, i) => i !== RIFIUTA).map((p) => p.id));
+
+  const visiteOrdinate = [...visiteRows].sort((a, b) => a.dataVisita!.getTime() - b.dataVisita!.getTime());
+  const dueSettimaneFa = Date.now() - 14 * 86_400_000;
+  const auditRows = visiteOrdinate
+    .filter((v) => v.dataVisita!.getTime() > dueSettimaneFa && conConsenso.has(v.pazienteId))
+    .map((v) => ({
+      id: stableId(`audit:${v.id}`),
+      ambulatorioId: ambulatorio.id,
+      userId: v.medicoId,
+      pazienteId: v.pazienteId,
+      azione: "trascrizione",
+      // The demo never calls a real provider, so its history says so too.
+      provider: PROVIDER_SIMULATO,
+      modello: MODELLO_SIMULATO,
+      byteAudio: null,
+      esito: "ok",
+      createdAt: new Date(v.dataVisita!.getTime() + 20 * 60_000),
+    }));
+  if (auditRows.length) await db.insert(aiAuditLog).values(auditRows);
+
+  // Invoices for most past visits of the current year, numbered per doctor as they would be issued.
+  const tipoAppuntamento = new Map(createdAppuntamenti.map((a) => [a.id, a.tipo]));
+  const medicoDi = new Map(staff.map((u) => [u.id, u]));
+  const pazienteDi = new Map(createdPazienti.map((p, i) => [p.id, { ...p, condizione: PAZIENTI[i].condizione }]));
+  const numeri = new Map<string, number>();
+  const documentiRows: (typeof documentiSpesa.$inferInsert)[] = [];
+  for (const v of visiteOrdinate) {
+    const p = romeParts(v.dataVisita!);
+    if (p.year !== today.year) continue;
+    const frand = seededRand(`fattura:${v.id}`);
+    if (frand() > 0.75) continue;
+    const medico = medicoDi.get(v.medicoId)!;
+    const paziente = pazienteDi.get(v.pazienteId)!;
+    const tipo = (v.appuntamentoId && tipoAppuntamento.get(v.appuntamentoId)) || "controllo";
+    const voci: VoceSpesa[] = [{ tipoSpesa: "SR", descrizione: tipo === "prima-visita" ? "Prima visita" : "Visita di controllo", importoCentesimi: TARIFFE[tipo] ?? TARIFFE.controllo }];
+    if (paziente.condizione === "fibrillazione" || paziente.condizione === "ipertensione") {
+      voci.push({ tipoSpesa: "SR", descrizione: "Elettrocardiogramma", importoCentesimi: 4000 });
+    }
+    const chiave = `${medico.id}:${p.year}`;
+    const numero = (numeri.get(chiave) ?? 0) + 1;
+    numeri.set(chiave, numero);
+    const giorno = `${p.year}-${String(p.month + 1).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+    documentiRows.push({
+      id: stableId(`fattura:${v.id}`),
+      ambulatorioId: ambulatorio.id,
+      emittenteId: medico.id,
+      pazienteId: paziente.id,
+      visitaId: v.id!,
+      anno: p.year,
+      numero,
+      dataEmissione: giorno,
+      dataPagamento: giorno,
+      metodoPagamento: METODI[Math.floor(frand() * METODI.length)],
+      voci,
+      naturaIva: medico.naturaIvaDefault!,
+      bollo: richiedeBollo(totaleVociCentesimi(voci), medico.naturaIvaDefault),
+      flagOpposizione: frand() < 0.1,
+      cfEmittente: medico.codiceFiscale!,
+      pivaEmittente: medico.partitaIva!,
+      cfPaziente: paziente.codiceFiscale!,
+      createdAt: v.dataVisita!,
+    });
+  }
+  if (documentiRows.length) await db.insert(documentiSpesa).values(documentiRows);
 }

@@ -14,6 +14,8 @@ import { registerThemeRoutes } from "./theme";
 import { registerOnboardingRoutes } from "./onboarding";
 import { registerSpecializationRoutes } from "./specializations";
 import { registerPreferenceRoutes } from "./preferences";
+import { registerDocumentoSpesaRoutes } from "./documenti-spesa";
+import { registerSistemaTsRoutes } from "./sistema-ts";
 
 export function registerRoutes(app: Express): void {
   // Public routes.
@@ -34,4 +36,6 @@ export function registerRoutes(app: Express): void {
   registerOnboardingRoutes(app);
   registerSpecializationRoutes(app);
   registerPreferenceRoutes(app);
+  registerDocumentoSpesaRoutes(app);
+  registerSistemaTsRoutes(app);
 }

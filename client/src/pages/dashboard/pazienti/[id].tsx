@@ -18,12 +18,15 @@ import {
   FileText,
   Pill,
   Activity,
-  Download
+  Download,
+  Receipt
 } from "lucide-react";
 import { format, differenceInYears, formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
-import type { Paziente, Visita } from "@shared/schema";
+import type { Paziente, Visita, DocumentoSpesa } from "@shared/schema";
 import { useAmbulatorio } from "@/lib/useAmbulatorio";
+import { InformativaAiCard } from "@/components/ai/InformativaAiCard";
+import { EmettiFatturaDialog } from "@/components/fiscale/EmettiFatturaDialog";
 
 interface PazienteConVisite extends Paziente {
   visite?: Visita[];
@@ -53,6 +56,17 @@ export default function PazienteDettaglio() {
     },
     enabled: !!pazienteId && !!ambulatorioId,
   });
+
+  const { data: documenti = [] } = useQuery<DocumentoSpesa[]>({
+    queryKey: ["/api/documenti-spesa", { pazienteId }],
+    queryFn: async () => {
+      const res = await fetch(`/api/documenti-spesa?pazienteId=${pazienteId}`);
+      if (!res.ok) throw new Error("Errore caricamento fatture");
+      return res.json();
+    },
+    enabled: !!pazienteId,
+  });
+  const [visitaDaFatturare, setVisitaDaFatturare] = useState<Visita | undefined>();
 
   if (isPazienteLoading) {
     return (
@@ -185,6 +199,8 @@ export default function PazienteDettaglio() {
         </CardContent>
       </Card>
 
+      {pazienteId && <InformativaAiCard pazienteId={pazienteId} />}
+
       {/* Alert Box Allergie */}
       {hasAllergie && (
         <Alert className="bg-red-50 dark:bg-red-950 border-l-4 border-l-red-500 border-red-200 dark:border-red-800" data-testid="alert-allergie">
@@ -312,11 +328,37 @@ export default function PazienteDettaglio() {
                     <div className="text-sm text-muted-foreground">
                       {format(new Date(visita.dataVisita), "HH:mm", { locale: it })}
                     </div>
-                    <Link href={`/dashboard/cartella-clinica?pazienteId=${pazienteId}`}>
-                      <Button variant="ghost" className="text-primary">
-                        Vedi cartella completa →
-                      </Button>
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2 justify-end">
+                      {(() => {
+                        const fattura = documenti.find((d) => d.visitaId === visita.id);
+                        return fattura ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/api/documenti-spesa/${fattura.id}/pdf`, "_blank")}
+                            data-testid={`button-pdf-fattura-${visita.id}`}
+                          >
+                            <Receipt className="h-4 w-4 mr-2" />
+                            Fattura n. {fattura.numero}/{fattura.anno}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVisitaDaFatturare(visita)}
+                            data-testid={`button-emetti-fattura-${visita.id}`}
+                          >
+                            <Receipt className="h-4 w-4 mr-2" />
+                            Emetti fattura
+                          </Button>
+                        );
+                      })()}
+                      <Link href={`/dashboard/cartella-clinica?pazienteId=${pazienteId}`}>
+                        <Button variant="ghost" className="text-primary">
+                          Vedi cartella completa →
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </CardFooter>
               </Card>
@@ -324,6 +366,15 @@ export default function PazienteDettaglio() {
           </div>
         )}
       </div>
+
+      {pazienteId && (
+        <EmettiFatturaDialog
+          pazienteId={pazienteId}
+          visita={visitaDaFatturare}
+          open={!!visitaDaFatturare}
+          onOpenChange={(open) => !open && setVisitaDaFatturare(undefined)}
+        />
+      )}
     </div>
   );
 }

@@ -11,7 +11,8 @@ import {
   Settings as SettingsIcon,
   ChevronRight,
   Palette,
-  Sliders
+  Sliders,
+  Receipt
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,6 +97,13 @@ export default function Impostazioni() {
       icon: Users,
       href: "/dashboard/impostazioni/team",
       color: "orange"
+    },
+    {
+      title: "Dati Fiscali",
+      description: "Codice fiscale, partita IVA e regime del medico per fatture e Sistema TS",
+      icon: Receipt,
+      href: "/dashboard/impostazioni/dati-fiscali",
+      color: "indigo"
     },
     {
       title: "Notifiche & Reminder",

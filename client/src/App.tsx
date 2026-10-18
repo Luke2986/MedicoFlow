@@ -23,6 +23,9 @@ import ImpostazioniPreferenze from "@/pages/dashboard/impostazioni/preferenze";
 import ImpostazioniPrivacy from "@/pages/dashboard/impostazioni/privacy";
 import ImpostazioniSupporto from "@/pages/dashboard/impostazioni/supporto";
 import ImpostazioniAspetto from "@/pages/dashboard/impostazioni/aspetto";
+import ImpostazioniDatiFiscali from "@/pages/dashboard/impostazioni/dati-fiscali";
+import Fatture from "@/pages/dashboard/fatture";
+import SistemaTs from "@/pages/dashboard/sistema-ts";
 import Pricing from "@/pages/pricing";
 import LoginPage from "@/pages/login";
 import SetupPage from "@/pages/setup";
@@ -142,6 +145,21 @@ function Router() {
       <Route path="/dashboard/impostazioni/aspetto">
         <DashboardLayout>
           <ImpostazioniAspetto />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/impostazioni/dati-fiscali">
+        <DashboardLayout>
+          <ImpostazioniDatiFiscali />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/fatture">
+        <DashboardLayout>
+          <Fatture />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/sistema-ts">
+        <DashboardLayout>
+          <SistemaTs />
         </DashboardLayout>
       </Route>
       <Route component={NotFound} />

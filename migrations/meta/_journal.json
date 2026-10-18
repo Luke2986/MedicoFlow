@@ -8,6 +8,20 @@
       "when": 1791310620382,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792339199571,
+      "tag": "0001_consenso_ai_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792339548189,
+      "tag": "0002_documenti_spesa",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, index, uniqueIndex, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, index, uniqueIndex, pgEnum, boolean, date, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -62,6 +62,11 @@ export const users = pgTable("users", {
   ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // In the Sistema TS the "proprietario" of a fiscal document is the individual doctor, not the clinic.
+  codiceFiscale: varchar("codice_fiscale", { length: 16 }),
+  partitaIva: varchar("partita_iva", { length: 11 }),
+  regimeFiscale: text("regime_fiscale"),
+  naturaIvaDefault: varchar("natura_iva_default", { length: 4 }).default("N4"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -343,6 +348,88 @@ export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const consensiAi = pgTable("consensi_ai", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
+  pazienteId: varchar("paziente_id").notNull().references(() => pazienti.id, { onDelete: "cascade" }),
+  versioneInformativa: varchar("versione_informativa", { length: 20 }).notNull(),
+  consensoRegistrazione: boolean("consenso_registrazione").notNull(),
+  raccoltoDa: varchar("raccolto_da").notNull().references(() => users.id),
+  revocatoAt: timestamp("revocato_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  pazienteIdx: index("consensi_ai_paziente_idx").on(table.pazienteId),
+}));
+
+// Never stores audio or transcribed text: only who used the AI, on which patient, and the outcome.
+export const aiAuditLog = pgTable("ai_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  pazienteId: varchar("paziente_id").references(() => pazienti.id, { onDelete: "set null" }),
+  azione: varchar("azione", { length: 30 }).notNull(),
+  provider: varchar("provider", { length: 30 }).notNull(),
+  modello: varchar("modello", { length: 60 }).notNull(),
+  byteAudio: integer("byte_audio"),
+  esito: varchar("esito", { length: 30 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  ambulatorioCreatedIdx: index("ai_audit_ambulatorio_created_idx").on(table.ambulatorioId, table.createdAt),
+}));
+
+export interface VoceSpesa {
+  tipoSpesa: string;
+  flagTipoSpesa?: string;
+  descrizione: string;
+  importoCentesimi: number;
+}
+
+export interface MessaggioTs {
+  codice: string;
+  descrizione: string;
+  tipo: string;
+}
+
+// Fiscal records are never cascaded away: deleting a patient or a doctor must not erase issued invoices.
+export const documentiSpesa = pgTable("documenti_spesa", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ambulatorioId: varchar("ambulatorio_id").notNull().references(() => ambulatori.id),
+  emittenteId: varchar("emittente_id").notNull().references(() => users.id),
+  pazienteId: varchar("paziente_id").notNull().references(() => pazienti.id),
+  visitaId: varchar("visita_id").references(() => visite.id, { onDelete: "set null" }),
+  anno: integer("anno").notNull(),
+  numero: integer("numero").notNull(),
+  tipoDocumento: varchar("tipo_documento", { length: 1 }).notNull().default("F"),
+  dataEmissione: date("data_emissione", { mode: "string" }).notNull(),
+  dataPagamento: date("data_pagamento", { mode: "string" }).notNull(),
+  metodoPagamento: text("metodo_pagamento").notNull(),
+  voci: jsonb("voci").$type<VoceSpesa[]>().notNull(),
+  naturaIva: varchar("natura_iva", { length: 4 }).notNull(),
+  bollo: boolean("bollo").notNull(),
+  flagOpposizione: boolean("flag_opposizione").notNull().default(false),
+  // Snapshot at issue time, so later edits to the doctor or patient do not change an issued document.
+  cfEmittente: varchar("cf_emittente", { length: 16 }).notNull(),
+  pivaEmittente: varchar("piva_emittente", { length: 11 }).notNull(),
+  cfPaziente: varchar("cf_paziente", { length: 16 }).notNull(),
+  statoTs: text("stato_ts").notNull().default("da_inviare"),
+  protocolloTs: varchar("protocollo_ts", { length: 20 }),
+  esitoTs: integer("esito_ts"),
+  messaggiTs: jsonb("messaggi_ts").$type<MessaggioTs[]>(),
+  inviatoAt: timestamp("inviato_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  numeroUnico: uniqueIndex("documenti_spesa_numero_unico").on(table.emittenteId, table.anno, table.numero),
+  ambulatorioAnnoIdx: index("documenti_spesa_ambulatorio_anno_idx").on(table.ambulatorioId, table.anno),
+  pazienteIdx: index("documenti_spesa_paziente_idx").on(table.pazienteId),
+}));
+
+export type DocumentoSpesa = typeof documentiSpesa.$inferSelect;
+export type InsertDocumentoSpesa = typeof documentiSpesa.$inferInsert;
+
+export type ConsensoAi = typeof consensiAi.$inferSelect;
+export type AiAuditEntry = typeof aiAuditLog.$inferSelect;
+export type InsertAiAuditEntry = typeof aiAuditLog.$inferInsert;
 
 export const leadStatusEnum = pgEnum("lead_status", ["NUOVO", "CONTATTATO", "CONVERTITO", "PERSO"]);
 

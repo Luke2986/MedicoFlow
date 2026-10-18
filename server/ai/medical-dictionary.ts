@@ -121,62 +121,10 @@ export const medicalTerms: Record<string, string> = {
   'occasionali': 'occasionali',
 };
 
-/**
- * Calcola la distanza di Levenshtein tra due stringhe
- */
-function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = [];
-
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
-  }
-
-  return matrix[b.length][a.length];
-}
-
-/**
- * Trova il termine medico più simile usando fuzzy matching
- */
+// Exact matches only. Fuzzy matching against every word rewrote correct Italian ("calore" became "cuore",
+// "inalazione" became "infezione"): in a clinical record a wrong correction is worse than none.
 function findClosestMedicalTerm(word: string): string | null {
-  const lowerWord = word.toLowerCase();
-  
-  // Match esatto
-  if (medicalTerms[lowerWord]) {
-    return medicalTerms[lowerWord];
-  }
-  
-  // Fuzzy match - cerca termini simili
-  let bestMatch: string | null = null;
-  let bestDistance = Infinity;
-  const maxDistance = Math.floor(word.length * 0.35); // max 35% di errore
-  
-  for (const [incorrect, correct] of Object.entries(medicalTerms)) {
-    const distance = levenshteinDistance(lowerWord, incorrect);
-    if (distance < bestDistance && distance <= maxDistance) {
-      bestDistance = distance;
-      bestMatch = correct;
-    }
-  }
-  
-  return bestMatch;
+  return medicalTerms[word.toLowerCase()] ?? null;
 }
 
 /**

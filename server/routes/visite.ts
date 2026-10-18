@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { ownsRecord } from "../authz";
 import { insertVisitaSchema, updateVisitaSchema } from "../../shared/schema";
 import { renderToStream } from "@react-pdf/renderer";
@@ -6,6 +6,30 @@ import { pazienteInClinic, resolveMedicoId } from "./helpers";
 import { storage } from "../storage";
 import { logError } from "../log";
 import CartellaClinicaPDF from "../../client/src/lib/pdf/cartella-pdf";
+import { fornitoreReferto } from "../ai/referto";
+
+/**
+ * Fields proposed by the AI are saved only after the doctor confirms the review. Returns false when the request
+ * was answered with an error. The confirmation is recorded in the AI log, which never contains clinical text.
+ */
+async function verificaRevisioneAi(req: Request, res: Response, pazienteId: string): Promise<boolean> {
+  const referto = req.body?.referto;
+  if (!referto?.daAi) return true;
+  if (referto.revisioneConfermata !== true) {
+    res.status(400).json({ error: "Conferma di aver rivisto il referto proposto dall'AI" });
+    return false;
+  }
+  await storage.logAiUsage({
+    ambulatorioId: req.user!.ambulatorioId,
+    userId: req.user!.id,
+    pazienteId,
+    azione: "conferma_referto",
+    ...fornitoreReferto(["llm", "regole", "simulato"].includes(referto.motore) ? referto.motore : "regole"),
+    byteAudio: null,
+    esito: "ok",
+  });
+  return true;
+}
 
 export function registerVisitaRoutes(app: Express) {
   app.get("/api/visite", async (req, res) => {
@@ -106,6 +130,7 @@ export function registerVisitaRoutes(app: Express) {
       if (!medicoId) {
         return res.status(400).json({ error: "Nessun medico disponibile per questo ambulatorio" });
       }
+      if (!(await verificaRevisioneAi(req, res, data.pazienteId))) return;
       const visita = await storage.createVisita({ ...data, medicoId });
       res.status(201).json(visita);
     } catch (error) {
@@ -126,6 +151,7 @@ export function registerVisitaRoutes(app: Express) {
       if (data.medicoId && !(await resolveMedicoId(req, data.medicoId))) {
         return res.status(404).json({ error: "Medico non trovato" });
       }
+      if (!(await verificaRevisioneAi(req, res, data.pazienteId ?? existing!.pazienteId))) return;
       const visita = await storage.updateVisita(req.params.id, data);
       res.json(visita);
     } catch (error: any) {

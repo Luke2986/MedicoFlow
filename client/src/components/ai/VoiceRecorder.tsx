@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Upload, Loader2, Sparkles, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
+import { Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import type { ConsensoAi } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -9,8 +12,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 interface VoiceRecorderProps {
   ambulatorioId: string;
   userId: string;
+  pazienteId?: string;
   onTranscriptionComplete: (result: any) => void;
   disabled?: boolean;
+  /** Public demo without an AI provider: no microphone is opened and the server returns a simulated dictation. */
+  simulazione?: boolean;
 }
 
 interface QuotaInfo {
@@ -24,15 +30,30 @@ interface QuotaInfo {
 export function VoiceRecorder({ 
   ambulatorioId,
   userId,
+  pazienteId,
   onTranscriptionComplete, 
-  disabled 
+  disabled,
+  simulazione,
 }: VoiceRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [consensoMancante, setConsensoMancante] = useState(false);
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [plan, setPlan] = useState<string>('');
   const [isLoadingQuota, setIsLoadingQuota] = useState(true);
+  const { data: consensoData, isLoading: isLoadingConsenso } = useQuery<{ consenso: ConsensoAi | null; versioneCorrente: string }>({
+    queryKey: ['/api/pazienti', pazienteId, 'consenso-ai'],
+    queryFn: async () => {
+      const res = await fetch(`/api/pazienti/${pazienteId}/consenso-ai`);
+      if (!res.ok) throw new Error('Errore nel caricamento del consenso AI');
+      return res.json();
+    },
+    enabled: !!pazienteId,
+  });
+  const consensoAttivo = !!consensoData?.consenso?.consensoRegistrazione;
+  const bloccatoPerConsenso = !pazienteId || isLoadingConsenso || !consensoAttivo;
+  const [secondi, setSecondi] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -56,7 +77,19 @@ export function VoiceRecorder({
     }
   };
 
+  useEffect(() => {
+    if (!isRecording) return;
+    setSecondi(0);
+    const t = setInterval(() => setSecondi((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [isRecording]);
+
   const startRecording = async () => {
+    if (simulazione) {
+      setError('');
+      setIsRecording(true);
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -105,21 +138,29 @@ export function VoiceRecorder({
   };
 
   const stopRecording = () => {
+    if (simulazione && isRecording) {
+      setIsRecording(false);
+      void sendAudio(null);
+      return;
+    }
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
   };
 
-  const processAudio = async (audioBlob: Blob) => {
+  const sendAudio = async (audio: Blob | null, filename?: string) => {
     setIsProcessing(true);
     setError('');
+    setConsensoMancante(false);
 
     try {
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
+      if (audio && filename) formData.append('audio', audio, filename);
+      else if (audio) formData.append('audio', audio);
       formData.append('ambulatorioId', ambulatorioId);
       formData.append('userId', userId);
+      if (pazienteId) formData.append('pazienteId', pazienteId);
 
       const response = await fetch('/api/ai/transcribe', {
         method: 'POST',
@@ -129,13 +170,11 @@ export function VoiceRecorder({
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.code === 'CONSENSO_AI_MANCANTE') setConsensoMancante(true);
         throw new Error(data.error || 'Errore durante la trascrizione');
       }
 
-      // Update quota
       setQuota(data.quota);
-
-      // Call parent callback with transcription result
       onTranscriptionComplete(data.result);
     } catch (error: any) {
       setError(error.message || 'Errore durante la trascrizione');
@@ -144,48 +183,19 @@ export function VoiceRecorder({
     }
   };
 
+  const processAudio = (audioBlob: Blob) => sendAudio(audioBlob, 'recording.webm');
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 25MB)
     if (file.size > 25 * 1024 * 1024) {
       setError('File troppo grande (max 25MB)');
       return;
     }
 
-    setIsProcessing(true);
-    setError('');
-
-    try {
-      const formData = new FormData();
-      formData.append('audio', file);
-      formData.append('ambulatorioId', ambulatorioId);
-      formData.append('userId', userId);
-
-      const response = await fetch('/api/ai/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Errore durante la trascrizione');
-      }
-
-      // Update quota
-      setQuota(data.quota);
-
-      // Call parent callback
-      onTranscriptionComplete(data.result);
-    } catch (error: any) {
-      setError(error.message || 'Errore durante la trascrizione');
-    } finally {
-      setIsProcessing(false);
-      // Reset file input
-      event.target.value = '';
-    }
+    await sendAudio(file);
+    event.target.value = '';
   };
 
   // Check if feature is available for current plan
@@ -232,6 +242,30 @@ export function VoiceRecorder({
         </div>
       )}
 
+      {!pazienteId && (
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800 dark:text-orange-200">
+            Seleziona un paziente per usare la dettatura vocale.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {pazienteId && !isLoadingConsenso && !consensoAttivo && (
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20" data-testid="alert-consenso-ai-mancante">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800 dark:text-orange-200">
+            <strong>Dettatura bloccata:</strong>{' '}
+            {consensoData?.consenso
+              ? 'il paziente ha rifiutato la trascrizione con AI.'
+              : "il paziente non ha ancora ricevuto l'informativa sull'uso dell'AI (L. 132/2025, art. 7)."}
+            <Link href={`/dashboard/pazienti/${pazienteId}`} className="block mt-1 underline font-medium">
+              Gestisci l'informativa nella scheda del paziente
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Best Practices per Trascrizione di Qualità */}
       <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
         <Info className="h-4 w-4 text-blue-600" />
@@ -261,7 +295,7 @@ export function VoiceRecorder({
       <div className="flex gap-2">
         <Button
           onClick={isRecording ? stopRecording : startRecording}
-          disabled={disabled || isProcessing || isQuotaExceeded}
+          disabled={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso}
           variant={isRecording ? 'destructive' : 'default'}
           className="flex-1"
           data-testid="button-voice-record"
@@ -282,8 +316,9 @@ export function VoiceRecorder({
         <label>
           <Button
             variant="outline"
-            disabled={disabled || isProcessing || isQuotaExceeded}
+            disabled={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso}
             asChild
+            className={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
             data-testid="button-voice-upload"
           >
             <span>
@@ -296,29 +331,46 @@ export function VoiceRecorder({
             accept="audio/*"
             onChange={handleFileUpload}
             className="hidden"
-            disabled={disabled || isProcessing || isQuotaExceeded}
+            disabled={disabled || isProcessing || isQuotaExceeded || bloccatoPerConsenso}
           />
         </label>
       </div>
 
       {isRecording && (
-        <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+        <div className="flex items-center gap-3 text-sm text-blue-600 dark:text-blue-400" data-testid="indicatore-registrazione">
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          <span className="font-medium">Registrazione in corso - Parla chiaramente vicino al microfono</span>
+          <span className="font-mono tabular-nums">
+            {String(Math.floor(secondi / 60)).padStart(2, '0')}:{String(secondi % 60).padStart(2, '0')}
+          </span>
+          <div className="flex items-end gap-0.5 h-5" aria-hidden>
+            {Array.from({ length: 12 }, (_, i) => (
+              <span key={i} className="onda-barra w-1 rounded-full bg-blue-500" style={{ animationDelay: `${(i * 137) % 900}ms` }} />
+            ))}
+          </div>
+          <span className="font-medium">
+            {simulazione ? 'Registrazione in corso' : 'Registrazione in corso - Parla chiaramente vicino al microfono'}
+          </span>
         </div>
       )}
 
       {isProcessing && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="indicatore-trascrizione">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Trascrizione in corso...</span>
+          <span>Trascrizione in corso…</span>
         </div>
       )}
 
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error}
+            {consensoMancante && pazienteId && (
+              <Link href={`/dashboard/pazienti/${pazienteId}`} className="block mt-1 underline font-medium">
+                Registra l'informativa AI nella scheda del paziente
+              </Link>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

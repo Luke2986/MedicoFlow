@@ -5,6 +5,11 @@ import { renderToStream } from "@react-pdf/renderer";
 import { storage } from "../storage";
 import { logError } from "../log";
 import CartellaClinicaPDF from "../../client/src/lib/pdf/cartella-pdf";
+import InformativaAiPDF from "../../client/src/lib/pdf/informativa-pdf";
+import { INFORMATIVA_AI_VERSIONE } from "../../shared/informativa-ai";
+import { z } from "zod";
+
+const consensoAiSchema = z.object({ consensoRegistrazione: z.boolean() });
 
 export function registerPazienteRoutes(app: Express) {
   app.get("/api/pazienti", async (req, res) => {
@@ -237,6 +242,67 @@ export function registerPazienteRoutes(app: Express) {
     }
   });
 
+  app.get("/api/pazienti/:id/consenso-ai", async (req, res) => {
+    try {
+      const paziente = await storage.getPaziente(req.params.id);
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
+      const consenso = await storage.getConsensoAiAttivo(paziente.id);
+      res.json({ consenso: consenso ?? null, versioneCorrente: INFORMATIVA_AI_VERSIONE });
+    } catch (error) {
+      logError("Errore lettura consenso AI:", error);
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  app.post("/api/pazienti/:id/consenso-ai", async (req, res) => {
+    try {
+      const paziente = await storage.getPaziente(req.params.id);
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
+      const { consensoRegistrazione } = consensoAiSchema.parse(req.body);
+      const consenso = await storage.createConsensoAi({
+        ambulatorioId: paziente.ambulatorioId,
+        pazienteId: paziente.id,
+        versioneInformativa: INFORMATIVA_AI_VERSIONE,
+        consensoRegistrazione,
+        raccoltoDa: req.user!.id,
+      });
+      res.status(201).json(consenso);
+    } catch (error) {
+      logError("Errore registrazione consenso AI:", error);
+      res.status(400).json({ error: "Dati non validi" });
+    }
+  });
+
+  app.post("/api/pazienti/:id/consenso-ai/revoca", async (req, res) => {
+    try {
+      const paziente = await storage.getPaziente(req.params.id);
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
+      await storage.revocaConsensiAi(paziente.id);
+      res.status(204).send();
+    } catch (error) {
+      logError("Errore revoca consenso AI:", error);
+      res.status(500).json({ error: "Errore del server" });
+    }
+  });
+
+  app.get("/api/pazienti/:id/informativa-ai-pdf", async (req, res) => {
+    try {
+      const paziente = await storage.getPaziente(req.params.id);
+      if (!ownsRecord(req, res, paziente, "Paziente non trovato")) return;
+      const ambulatorio = await storage.getAmbulatorio(paziente.ambulatorioId);
+      if (!ambulatorio) {
+        return res.status(404).json({ error: "Ambulatorio non trovato" });
+      }
+      const pdfStream = await renderToStream(InformativaAiPDF({ paziente, ambulatorio }));
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="InformativaAI_${paziente.cognome}_${paziente.nome}.pdf"`);
+      pdfStream.pipe(res);
+    } catch (error) {
+      logError("Errore generazione PDF informativa:", error);
+      res.status(500).json({ error: "Errore durante la generazione del PDF" });
+    }
+  });
+
   app.get("/api/pazienti/:id", async (req, res) => {
     try {
       const paziente = await storage.getPaziente(req.params.id);
@@ -288,7 +354,10 @@ export function registerPazienteRoutes(app: Express) {
       if (!ownsRecord(req, res, existing, "Paziente non trovato")) return;
       await storage.deletePaziente(req.params.id);
       res.status(204).send();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === "23503" || error?.cause?.code === "23503") {
+        return res.status(409).json({ error: "Il paziente ha visite o fatture associate e non può essere eliminato" });
+      }
       res.status(500).json({ error: "Errore durante l'eliminazione" });
     }
   });

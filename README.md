@@ -62,7 +62,9 @@ Senza `DATABASE_URL` l'app usa un database PostgreSQL in memoria ([PGlite](https
 - **Ricomincia da zero** svuota tutto e apre la configurazione iniziale, per provare l'app con il proprio ambulatorio.
 - Con `DEMO_DATA=false` l'app parte direttamente vuota.
 
-Limiti della modalità demo: i dati restano solo nella memoria del server, si perdono a ogni riavvio e sono condivisi tra tutti i visitatori. Non usarla per dati reali.
+Limiti della modalità demo: i dati restano solo nella memoria del server, si perdono a ogni riavvio e sono condivisi tra tutti i visitatori. Non usarla per dati reali. Per lo stesso motivo nella demo l'invio al Sistema TS è disattivato: riepilogo ed export CSV restano disponibili sulle fatture di esempio.
+
+Senza `GROQ_API_KEY` la demo non chiama nessun fornitore AI: dettatura e referto sono simulati (`server/ai/simulazione.ts`). La "registrazione" non usa il microfono e restituisce una dettatura costruita dall'ultima visita del paziente; la strutturazione divide il testo per sezioni e parole chiave cliniche. Il flusso resta quello reale: consenso, registro AI con fornitore `simulato` e revisione obbligatoria del medico. Il badge "simulazione demo" lo dichiara. La simulazione non si attiva mai con un database esterno o con una chiave configurata.
 
 ## Avvio in locale con un database
 
@@ -102,9 +104,11 @@ cp .env.example .env
 | `BETTER_AUTH_SECRET` | Sì con un database | Chiave per firmare le sessioni. Generala con `openssl rand -base64 32` e non condividerla. In modalità demo, se manca, ne viene generata una a ogni avvio |
 | `BETTER_AUTH_URL` | No | URL pubblico dell'app (es. `https://medicoflow.example.it`). Su Vercel viene ricavato in automatico; in locale il default è `http://localhost:5000` |
 | `PORT` | No | Porta del server (default `5000`) |
-| `GROQ_API_KEY` | No | Abilita la dettatura vocale. Senza chiave l'app funziona e la funzione resta disattivata |
+| `GROQ_API_KEY` | No | Abilita la dettatura vocale (Whisper) e la proposta di referto con LLM. Senza chiave, nella demo in memoria dettatura e referto sono simulati; con un database esterno la dettatura resta disattivata e il referto si struttura con regole locali sulle sezioni dettate |
 | `ADMIN_TOKEN` | No | Abilita le rotte admin (elenco dei contatti raccolti dalla pagina prezzi). Senza token restano disattivate |
 | `TRUST_PROXY` | No | Numero di reverse proxy davanti al server (es. `1` dietro Nginx). Su Vercel non serve |
+| `TS_ENV` | No | Ambiente del Sistema Tessera Sanitaria: `test` (default) o `prod` |
+| `TS_CERT_PATH` / `TS_CERT_PEM` | No | Certificato di cifratura del kit di sviluppo del Sistema TS (percorso del file o contenuto PEM). Senza certificato l'invio diretto è disattivato e resta l'export CSV. Le credenziali TS dei medici si inseriscono a ogni invio e non vengono salvate |
 
 Il valore d'esempio di `DATABASE_URL` in `.env.example` (da decommentare) corrisponde al database avviato con `docker compose`.
 
@@ -231,6 +235,10 @@ Ogni push e pull request su GitHub esegue controllo dei tipi, test e build (`.gi
 - [x] Test automatici e CI
 - [x] Aggiornamento a Tailwind CSS 4 e Vite 8
 - [x] Demo pronta senza database
+- [x] Informativa e consenso del paziente all'uso dell'AI (L. 132/2025, art. 7), con blocco della dettatura e registro d'uso. Il testo è una bozza da validare con un DPO o un legale
+- [x] Fattura sanitaria al paziente (fuori SdI) con PDF, numerazione per medico e anno, bollo
+- [ ] Invio al Sistema TS: inserimento implementato, da provare nell'ambiente di test con il kit ufficiale (certificato e XSD aggiornato). Mancano variazione, cancellazione e rimborso
+- [x] Referto strutturato dalla dettatura: proposta campo per campo (LLM su Groq oppure regole locali senza chiave), revisione e conferma del medico obbligatorie prima del salvataggio, registrate nel registro AI
 - [ ] Dettatura vocale con [Wispr Flow](https://wisprflow.ai) come alternativa a Groq: oggi tra le migliori per qualità della trascrizione. L'accesso all'API va richiesto al team enterprise di Wispr
 
 ## Contribuire

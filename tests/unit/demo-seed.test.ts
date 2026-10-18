@@ -47,6 +47,62 @@ describe("demo mode (in-memory database)", () => {
     }
   });
 
+  it("ships AI consents and valid, consecutively numbered invoices", async () => {
+    const { validaDocumento } = await import("../../shared/fiscale");
+    const pazienti = await db.select().from(schema.pazienti);
+    const consensi = await db.select().from(schema.consensiAi);
+    expect(consensi.length).toBe(pazienti.length - 2);
+    expect(consensi.filter((c) => !c.consensoRegistrazione)).toHaveLength(1);
+
+    const documenti = await db.select().from(schema.documentiSpesa);
+    expect(documenti.length).toBeGreaterThan(5);
+    const numeri = new Map<string, number[]>();
+    for (const d of documenti) {
+      expect(validaDocumento(d)).toEqual([]);
+      const key = `${d.emittenteId}:${d.anno}`;
+      numeri.set(key, [...(numeri.get(key) ?? []), d.numero]);
+    }
+    for (const n of Array.from(numeri.values())) {
+      expect(n.sort((a, b) => a - b)).toEqual(n.map((_, i) => i + 1));
+    }
+  });
+
+  it("never accepts Sistema TS credentials in the public demo", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/demo/session");
+    expect((await agent.get("/api/sistema-ts/stato")).body.demo).toBe(true);
+    const [doc] = await db.select().from(schema.documentiSpesa);
+    const res = await agent
+      .post("/api/sistema-ts/invia")
+      .send({ credenziali: { utente: "u", password: "p", pincode: "1" }, documentoIds: [doc.id] });
+    expect(res.status).toBe(403);
+    expect((await db.select().from(schema.documentiSpesa)).find((d) => d.id === doc.id)!.statoTs).toBe("da_inviare");
+  });
+
+  it("simulates the AI provider, with consent and audit, when no API key is set", async () => {
+    const agent = request.agent(app);
+    await agent.post("/api/demo/session");
+    expect((await agent.get("/api/ai/stato")).body).toEqual({ trascrizione: true, strutturazione: "simulato", simulazione: true });
+
+    const consensi = await db.select().from(schema.consensiAi);
+    const conConsenso = consensi.find((c) => c.consensoRegistrazione)!.pazienteId;
+    const senzaConsenso = (await db.select().from(schema.pazienti)).find((p) => !consensi.some((c) => c.pazienteId === p.id))!.id;
+    expect((await agent.post("/api/ai/transcribe").field("pazienteId", senzaConsenso)).status).toBe(403);
+
+    const trascrizione = await agent.post("/api/ai/transcribe").field("pazienteId", conConsenso);
+    expect(trascrizione.status).toBe(200);
+    expect(trascrizione.body.result.text).toMatch(/Diagnosi: /);
+
+    const referto = await agent.post("/api/ai/referto").send({ pazienteId: conConsenso, testo: trascrizione.body.result.text });
+    expect(referto.body.motore).toBe("simulato");
+    expect(referto.body.campi.diagnosi).not.toBe("");
+
+    const audit = (await db.select().from(schema.aiAuditLog)).filter((r) => r.pazienteId === conConsenso && r.esito === "ok");
+    expect(audit.filter((r) => r.provider === "simulato").map((r) => r.azione)).toEqual(
+      expect.arrayContaining(["trascrizione", "strutturazione"]),
+    );
+  });
+
   it("lets a visitor in with one click, without exposing the password", async () => {
     const status = await request(app).get("/api/demo");
     expect(status.body).toEqual({ demo: true, hasDemoData: true });
