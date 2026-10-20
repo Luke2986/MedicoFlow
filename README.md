@@ -48,8 +48,8 @@ tests/      Test automatici (unitari e di integrazione API)
 Serve solo Node.js 22 (oppure 20.19 o successiva).
 
 ```bash
-git clone https://github.com/Luke2986/MedicoFlowClinic.git
-cd MedicoFlowClinic
+git clone https://github.com/Luke2986/MedicoFlow.git
+cd MedicoFlow
 npm install
 npm run dev
 ```
@@ -76,8 +76,8 @@ Senza `GROQ_API_KEY` la demo non chiama nessun fornitore AI: dettatura e referto
 ### 1. Installazione
 
 ```bash
-git clone https://github.com/Luke2986/MedicoFlowClinic.git
-cd MedicoFlowClinic
+git clone https://github.com/Luke2986/MedicoFlow.git
+cd MedicoFlow
 npm install
 ```
 
